@@ -10,3 +10,6 @@
 [submodule "tests"]
 	path = tests
 	url = https://github.com/lua/tests.git
+[submodule "LuaJIT-test-cleanup"]
+	path = LuaJIT-test-cleanup
+	url = https://github.com/LuaJIT/LuaJIT-test-cleanup.git
