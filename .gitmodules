@@ -4,3 +4,9 @@
 [submodule "lua"]
 	path = lua
 	url = https://github.com/lua/lua.git
+[submodule "luac"]
+	path = luac
+	url = https://github.com/lua/luac.git
+[submodule "tests"]
+	path = tests
+	url = https://github.com/lua/tests.git
