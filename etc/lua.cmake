@@ -19,8 +19,6 @@ SET(CMAKE_REQUIRED_INCLUDES
   ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-OPTION(WITH_AMALG "Build eveything in one shot (needs memory)" ON)
-
 # Ugly warnings
 IF(MSVC)
   ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
@@ -32,8 +30,7 @@ INCLUDE(CheckFunctionExists)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckTypeSize)
 
-CHECK_TYPE_SIZE("void*" SIZEOF_VOID_P)
-IF(SIZEOF_VOID_P EQUAL 8)
+IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
   ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE)
 ENDIF()
 
@@ -68,7 +65,8 @@ SET(SRC_LUALIB
   ${LUA_DIR}/loslib.c
   ${LUA_DIR}/lstrlib.c
   ${LUA_DIR}/ltablib.c
-  ${LUA_DIR}/lutf8lib.c)
+  ${LUA_DIR}/lutf8lib.c
+)
 
 SET(SRC_LUACORE
   ${LUA_DIR}/lauxlib.c
@@ -93,20 +91,29 @@ SET(SRC_LUACORE
   ${LUA_DIR}/lundump.c
   ${LUA_DIR}/lvm.c
   ${LUA_DIR}/lzio.c
-  ${SRC_LUALIB})
+  ${SRC_LUALIB}
+)
 
 ## GENERATE
-
-IF(WITH_AMALG)
-  add_library(lualib STATIC ${CMAKE_CURRENT_LIST_DIR}/lua_one.c )
-ELSE()
-  add_library(lualib STATIC ${SRC_LUACORE} )
-ENDIF()
-set_target_properties(lualib PROPERTIES
-  PREFIX "lib" IMPORT_PREFIX "lib")
+add_library(lualib STATIC ${SRC_LUACORE} )
+set(LUA_COMPILE_DEFINITIONS)
 IF(ANDROID)
+  list(APPEND LUA_COMPILE_DEFINITIONS LUA_USER_H="luauser.h" )
+  SET(LUA_COMPILE_FLAGS "-I${CMAKE_CURRENT_LIST_DIR}")
+ENDIF()
+IF(NOT WIN32)
+  list(APPEND LUA_COMPILE_DEFINITIONS "LUA_USE_POSIX" )
+ENDIF()
+
+SET_TARGET_PROPERTIES(lualib PROPERTIES
+  PREFIX "lib"
+  IMPORT_PREFIX "lib"
+  COMPILE_DEFINITIONS "${LUA_COMPILE_DEFINITIONS}"
+)
+IF(LUA_COMPILE_FLAGS)
   SET_TARGET_PROPERTIES(lualib PROPERTIES
-  COMPILE_DEFINITIONS "LUA_USE_POSIX")
+	COMPILE_FLAGS ${LUA_COMPILE_FLAGS}
+  )
 ENDIF()
 
 target_link_libraries (lualib ${LIBS} )
@@ -139,7 +146,7 @@ MACRO(LUA_add_custom_commands luajit_target)
         MAIN_DEPENDENCY ${source_file}
         DEPENDS lua
         COMMAND lua
-	ARGS "${LUA_DIR}/../luac.lua"
+	ARGS "${CMAKE_CURRENT_LIST_DIR}/luac.lua"
           ${source_file}
           ${generated_file}
         COMMENT "Building Lua ${source_file}: ${generated_file}"
