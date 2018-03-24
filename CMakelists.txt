@@ -1,0 +1,82 @@
+cmake_minimum_required(VERSION 3.0.2)
+
+set(projects C ASM)
+project(lua ${projects})
+
+# use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH FALSE CACHE INTERNAL "")
+# when building, don't use the install RPATH already
+# (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE CACHE INTERNAL "")
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib" CACHE INTERNAL "")
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE CACHE INTERNAL "")
+# the RPATH to be used when installing, but only if it's not a system directory
+LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+IF("${isSystemDir}" STREQUAL "-1")
+   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+ENDIF("${isSystemDir}" STREQUAL "-1")
+
+#convert /MD to /MD when build with MSVC
+include(etc/static.cmake)
+include(etc/portable.cmake)
+
+#~ if(${CMAKE_SYSTEM_NAME} MATCHES "Android")
+#~   message("-- Build for Android")
+#~   set(TARGET_LJARCH "arm")      #for luajit
+#~   set(ARCH "arm")               #for openssl
+#~ endif()
+
+find_package(Threads)
+
+##############################################################################
+## build lua[jit]
+# Build luv as static library insteas as module
+set(BUILD_MODULE OFF CACHE STRING "Build lua[jit] as static library")
+
+option(BUILD_MODULE "Build as module" ON)
+option(BUILD_SHARED_LIBS "Build shared library" OFF)
+
+if (NOT WITH_LUA_ENGINE)
+  set(WITH_LUA_ENGINE "LuaJIT"
+    CACHE STRING "Link to LuaJIT or PUC Lua" FORCE)
+  set_property(CACHE WITH_LUA_ENGINE
+    PROPERTY STRINGS  "Lua;LuaJIT")
+endif (NOT WITH_LUA_ENGINE)
+
+if (NOT LUA_BUILD_TYPE)
+  set(LUA_BUILD_TYPE "Static"
+    CACHE STRING "Build Lua/LuaJIT as static, dynamic libary, or use system one" FORCE)
+  set_property(CACHE LUA_BUILD_TYPE
+    PROPERTY STRINGS  "Static;Dynamic;System")
+endif (NOT LUA_BUILD_TYPE)
+
+if (WITH_LUA_ENGINE STREQUAL Lua)
+  add_definitions(-DWITH_PLAIN_LUA)
+  if (NOT WIN32)
+    add_definitions(-DLUA_USE_DLOPEN)
+  endif (NOT WIN32)
+  set(USE_LUAJIT OFF)
+else ()
+  set(USE_LUAJIT ON)
+endif ()
+
+if (LUA_BUILD_TYPE STREQUAL Static)
+  SET(WITH_SHARED_LUA OFF)
+else (LUA_BUILD_TYPE STREQUAL Static)
+  SET(WITH_SHARED_LUA ON)
+endif (LUA_BUILD_TYPE STREQUAL Static)
+if (USE_LUAJIT)
+  SET(LUAJIT_ENABLE_LUA52COMPAT ON)
+  include(etc/luajit.cmake)
+  include_directories(${LUAJIT_DIR}/src)
+  set(LUAJIT_LIBRARIES luajit-5.1)
+else(USE_LUAJIT)
+  include(etc/lua.cmake)
+  include_directories(${LUA_DIR})
+endif (USE_LUAJIT)
+
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+  set(EXTRA_LIBS ${EXTRA_LIBS} rt)
+endif()

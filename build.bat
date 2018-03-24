@@ -28,3 +28,10 @@ echo Done
 goto EOF
 
 :EOF
+
+REM build wluajit
+REM ~ LUAJIT_SRC=../src
+REM ~ BIN_DIR=..
+REM ~ rc /foluajit.res luajit.rc 
+REM ~ cl -O2 wmain.c luajit.res ../src/luajit.c -Fewluajit.exe lua51.lib /link /SUBSYSTEM:WINDOWS
+REM ~ del *.obj *.res
