@@ -1,4 +1,4 @@
-ifeq ($(TARGET_SYS), Android)
+ifneq ($(TARGET_SYS), )
 	OS:=$(TARGET_SYS)
 else
 	OS:=$(shell uname -s)
@@ -72,7 +72,17 @@ ifeq ($(OS),Android)
 	  -DCMAKE_ANDROID_ARCH_ABI=armeabi -DCMAKE_ANDROID_NDK=${ANDROID_NDK} \
 	  -DCMAKE_MAKE_PROGRAM=${MAKE} \
 	  -DHOST_COMPILER=gcc -DHOST_LINKER=ld
-	  
+endif
+ifeq ($(OS),iOS)
+	ifndef GENERATOR
+		GENERATOR:="Unix Makefiles"
+	endif
+	ifndef BUILDTYPE
+		BUILDTYPE:=Release
+	endif
+	
+	CMAKE_EXTRA_OPTIONS+=-DCMAKE_TOOLCHAIN_FILE=etc/ios.toolchain.cmake -DIOS_PLATFORM=OS \
+		-DIOS_ARCH="armv7;armv7s" -DASM_FLAGS="-arch armv7 -arch armv7s -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.3.sdk"
 endif
 
 ifdef GENERATOR
@@ -110,8 +120,10 @@ MINGW64_NT-10.0:
 MINGW32_NT-10.0:
 	cmake -trace $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
 Android:
-	echo ${OS}
-	echo $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
+Darwin:
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
+iOS:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
 
 ##############################################################################

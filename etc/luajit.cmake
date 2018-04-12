@@ -23,11 +23,15 @@ INCLUDE(CheckTypeSize)
 # disable warning
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
 
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${CMAKE_C_FLAGS}")
+
 # LuaJIT specific
 option(LUAJIT_DISABLE_FFI "Disable FFI." OFF)
 option(LUAJIT_ENABLE_LUA52COMPAT "Enable Lua 5.2 compatibility." ON)
 option(LUAJIT_DISABLE_JIT "Disable JIT." OFF)
+if (NOT IOS)
 option(LUAJIT_CPU_SSE2 "Use SSE2 instead of x87 instructions." ON)
+endif ()
 option(LUAJIT_CPU_NOCMOV "Disable NOCMOV." OFF)
 MARK_AS_ADVANCED(LUAJIT_DISABLE_FFI LUAJIT_ENABLE_LUA52COMPAT LUAJIT_DISABLE_JIT LUAJIT_CPU_SSE2 LUAJIT_CPU_NOCMOV)
 
@@ -70,10 +74,8 @@ IF(LUAJIT_CPU_NOCMOV)
   list(APPEND LUAJIT_DEFINITIONS LUAJIT_CPU_NOCMOV)
 ENDIF()
 
-IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  list(APPEND LUAJIT_DEFINITIONS _FILE_OFFSET_BITS=64)
-  list(APPEND LUAJIT_DEFINITIONS _LARGEFILE_SOURCE)
-ENDIF()
+list(APPEND LUAJIT_DEFINITIONS _FILE_OFFSET_BITS=64)
+list(APPEND LUAJIT_DEFINITIONS _LARGEFILE_SOURCE)
 
 # Set LJVM_MODE LJVM
 set(LJVM_MODE)
@@ -82,7 +84,9 @@ if ( WIN32 AND NOT CYGWIN )
   set ( LJVM_MODE peobj )
   set ( LJ_VM lj_vm.obj )
 elseif ( APPLE )
-  set ( CMAKE_EXE_LINKER_FLAGS "-pagezero_size 10000 -image_base 100000000 ${CMAKE_EXE_LINKER_FLAGS}" )
+  if (NOT IOS)
+    set ( CMAKE_EXE_LINKER_FLAGS "-pagezero_size 10000 -image_base 100000000 ${CMAKE_EXE_LINKER_FLAGS}" )
+  endif ()
   set ( LJVM_MODE machasm )
 else ()
   set ( LJVM_MODE elfasm )
@@ -94,6 +98,7 @@ IF(WIN32)
     list(APPEND LUAJIT_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
   ENDIF()
 ELSE()
+  if(NOT IOS)
   FIND_LIBRARY(DL_LIBRARY "dl")
   IF(DL_LIBRARY)
     SET(CMAKE_REQUIRED_LIBRARIES ${DL_LIBRARY})
@@ -107,7 +112,7 @@ Function dlopen() seems not to be supported on your platform.
 Apparently you are not on a Windows platform as well.
 So lua has no way to deal with shared libraries!")
   ENDIF(NOT LUA_USE_DLOPEN)
-
+  endif()
   check_library_exists(m sin "" LUA_USE_LIBM)
   if ( LUA_USE_LIBM )
     list ( APPEND LIBS m )
@@ -213,6 +218,9 @@ IF(TARGET_LJARCH STREQUAL "ppc")
     SET(DASM_FLAGS ${DASM_FLAGS} -D GPR64)
   ENDIF()
 ENDIF()
+iF(IOS)
+  SET(DASM_FLAGS ${DASM_FLAGS} -D IOS)
+ENDIF()
 LIST(APPEND LUAJIT_DEFINITIONS ${TARGET_ARCH})
 
 # Check HOST_COMPILER
@@ -238,8 +246,11 @@ foreach(define IN LISTS LUAJIT_DEFINITIONS)
   SET(buildvm_arg -D${define} ${buildvm_arg})
 endforeach()
 
+if(IOS)
+  set(HOST_ARGS ${HOST_ARGS} -arch i386 -DLUAJIT_OS=LUAJIT_OS_OSX)
+endif()
 add_custom_command(OUTPUT ${MINILUA}
-  COMMAND ${HOST_COMPILER} ARGS ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}
+  COMMAND ${HOST_COMPILER} ARGS ${HOST_ARGS} ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}
 )
 
 # generate buildvm_arch.h
@@ -266,6 +277,7 @@ SET(buildvm_arg ${buildvm_arg} -I${LUAJIT_DIR}/src -I${CMAKE_CURRENT_BINARY_DIR}
 
 add_custom_command(OUTPUT ${BUILDVM}
   COMMAND ${HOST_COMPILER} ARGS
+    ${HOST_ARGS}
     ${buildvm_arg} ${buildvm_src} -o ${BUILDVM}
   DEPENDS ${MINILUA}
   MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
@@ -308,16 +320,25 @@ include_directories(
 set(LJ_COMPILE_FLAGS "-I${LUAJIT_DIR}/dynasm")
 
 ## link liblua
-IF(WITH_AMALG)
-  add_library(luajit-5.1 SHARED ${LUAJIT_DIR}/src/ljamalg.c ${DEPS} )
+set_source_files_properties(${LJ_VM_SRC}
+  properties
+  COMPILE_FLAGS ${CMAKE_C_FLAGS}
+)
+IF(IOS)
+  SET(LIBTYPE STATIC)
 ELSE()
-  add_library(luajit-5.1 SHARED ${SRC_LJCORE} ${DEPS} )
+  SET(LIBTYPE SHARED)
+ENDIF()
+IF(WITH_AMALG)
+  add_library(luajit-5.1 ${LIBTYPE} ${LUAJIT_DIR}/src/ljamalg.c ${DEPS} )
+ELSE()
+  add_library(luajit-5.1 ${LIBTYPE} ${SRC_LJCORE} ${DEPS} )
 ENDIF()
 SET_TARGET_PROPERTIES(luajit-5.1 PROPERTIES
   PREFIX "lib"
   IMPORT_PREFIX "lib"
   COMPILE_FLAGS ${LJ_COMPILE_FLAGS}
-  COMPILE_DEFINITIONS ${LUAJIT_DEFINITIONS}
+  COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
   OUTPUT_NAME "lua51"
 )
 target_link_libraries (luajit-5.1 ${LIBS} )
@@ -336,7 +357,7 @@ ELSE()
   target_link_libraries(luajit ${LIBS})
   SET_TARGET_PROPERTIES(luajit PROPERTIES
     COMPILE_FLAGS ${LJ_COMPILE_FLAGS}
-    COMPILE_DEFINITIONS ${LUAJIT_DEFINITIONS}
+    COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
     ENABLE_EXPORTS ON
   )
 ENDIF()
@@ -345,6 +366,8 @@ MACRO(LUAJIT_add_custom_commands luajit_target)
   SET(target_srcs "")
   IF(ANDROID)
     SET(LJDUMP_OPT "-b -a arm -o linux")
+  ELSEIF(IOS)
+    SET(LJDUMP_OPT "-b -a arm -o osx")
   ELSE()
     SET(LJDUMP_OPT "-b")
   ENDIF()
@@ -359,15 +382,18 @@ MACRO(LUAJIT_add_custom_commands luajit_target)
       string(SUBSTRING ${file} ${_begin} ${_stripped_file_length} stripped_file)
 
       set(generated_file "${CMAKE_BINARY_DIR}/jitted_tmp/${stripped_file}_${luajit_target}_generated${CMAKE_C_OUTPUT_EXTENSION}")
+      IF(IOS)
+        set(CMD /usr/local/bin/luajit)
+      else()
+        set(CMD luajit)
+      endif()
       add_custom_command(
         OUTPUT ${generated_file}
         MAIN_DEPENDENCY ${source_file}
         DEPENDS luajit
-        COMMAND luajit
-        ARGS ${LJDUMP_OPT}
-          ${source_file}
-          ${generated_file}
+        COMMAND "${CMD} ${LJDUMP_OPT} ${source_file} ${generated_file}"
         COMMENT "luajit ${LJDUMP_OPT} ${source_file} ${generated_file}"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       )
       get_filename_component(basedir ${generated_file} PATH)
       file(MAKE_DIRECTORY ${basedir})

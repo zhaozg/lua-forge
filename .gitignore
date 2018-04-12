@@ -2,3 +2,5 @@
 /build
 /MINGW*
 /Android
+/Darwin
+/iOS
