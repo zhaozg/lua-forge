@@ -80,9 +80,13 @@ ifeq ($(OS),iOS)
 	ifndef BUILDTYPE
 		BUILDTYPE:=Release
 	endif
-	
+
+ifdef NO_LUAJIT
+	CMAKE_EXTRA_OPTIONS+=-DCMAKE_TOOLCHAIN_FILE=etc/ios.toolchain.cmake -DIOS_PLATFORM=OS
+else
 	CMAKE_EXTRA_OPTIONS+=-DCMAKE_TOOLCHAIN_FILE=etc/ios.toolchain.cmake -DIOS_PLATFORM=OS \
 		-DIOS_ARCH="armv7;armv7s" -DASM_FLAGS="-arch armv7 -arch armv7s -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.3.sdk"
+endif
 endif
 
 ifdef GENERATOR
