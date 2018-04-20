@@ -1,3 +1,4 @@
+#ifndef LUA_LJDIR
 #if defined(__ANDROID__)
   #if __ANDROID_API__==19
      #if defined(lua_getlocaledecpoint)
@@ -19,3 +20,7 @@
     #define system(X)  0
   #endif
 #endif
+#else
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+

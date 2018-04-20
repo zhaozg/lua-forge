@@ -20,37 +20,42 @@ INCLUDE(CheckFunctionExists)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckTypeSize)
 
-# disable warning
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
-
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${CMAKE_C_FLAGS}")
 
 # LuaJIT specific
 option(LUAJIT_DISABLE_FFI "Disable FFI." OFF)
 option(LUAJIT_ENABLE_LUA52COMPAT "Enable Lua 5.2 compatibility." ON)
 option(LUAJIT_DISABLE_JIT "Disable JIT." OFF)
-if (NOT IOS)
-option(LUAJIT_CPU_SSE2 "Use SSE2 instead of x87 instructions." ON)
-endif ()
 option(LUAJIT_CPU_NOCMOV "Disable NOCMOV." OFF)
 MARK_AS_ADVANCED(LUAJIT_DISABLE_FFI LUAJIT_ENABLE_LUA52COMPAT LUAJIT_DISABLE_JIT LUAJIT_CPU_SSE2 LUAJIT_CPU_NOCMOV)
 
 OPTION(WITH_AMALG "Build eveything in one shot (needs memory)" ON)
 
 ## Source Lists
-file (GLOB_RECURSE SRC_LJLIB    "${LUAJIT_DIR}/src/lib_*.c")
+set(SRC_LJLIB
+  ${LUAJIT_DIR}/src/lib_base.c
+  ${LUAJIT_DIR}/src/lib_math.c
+  ${LUAJIT_DIR}/src/lib_bit.c
+  ${LUAJIT_DIR}/src/lib_string.c
+  ${LUAJIT_DIR}/src/lib_table.c
+  ${LUAJIT_DIR}/src/lib_io.c
+  ${LUAJIT_DIR}/src/lib_os.c
+  ${LUAJIT_DIR}/src/lib_package.c
+  ${LUAJIT_DIR}/src/lib_debug.c
+  ${LUAJIT_DIR}/src/lib_jit.c
+  ${LUAJIT_DIR}/src/lib_ffi.c
+)
+set(SRC_LIBAUX 
+  ${LUAJIT_DIR}/src/lib_aux.c
+  ${LUAJIT_DIR}/src/lib_init.c
+)
 file (GLOB_RECURSE SRC_LJCORE   "${LUAJIT_DIR}/src/lj_*.c")
+list (APPEND SRC_LJCORE ${LJLIB} ${SRC_LIBAUX})
 file (GLOB_RECURSE SRC_BUILDVM  "${LUAJIT_DIR}/src/host/buildvm*.c")
 
 FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/jit)
 FILE(GLOB jit_files ${LUAJIT_DIR}/src/jit/*.lua)
 FILE(COPY ${jit_files} DESTINATION ${CMAKE_BINARY_DIR}/jit)
-
-SET(CMAKE_REQUIRED_INCLUDES
-  ${LUAJIT_DIR}
-  ${LUAJIT_DIR}/src
-  ${CMAKE_CURRENT_BINARY_DIR}
-)
 
 # Check Definitions
 set(LUAJIT_DEFINITIONS)
@@ -66,16 +71,13 @@ IF(LUAJIT_DISABLE_JIT)
   list(APPEND LUAJIT_DEFINITIONS LUAJIT_DISABLE_JIT)
 ENDIF()
 
-IF(LUAJIT_CPU_SSE2)
-  list(APPEND LUAJIT_DEFINITIONS LUAJIT_CPU_SSE2)
-ENDIF()
-
 IF(LUAJIT_CPU_NOCMOV)
   list(APPEND LUAJIT_DEFINITIONS LUAJIT_CPU_NOCMOV)
 ENDIF()
 
 list(APPEND LUAJIT_DEFINITIONS _FILE_OFFSET_BITS=64)
 list(APPEND LUAJIT_DEFINITIONS _LARGEFILE_SOURCE)
+list(APPEND LUAJIT_DEFINITIONS _FORTIFY_SOURCE)
 
 # Set LJVM_MODE LJVM
 set(LJVM_MODE)
@@ -95,21 +97,25 @@ IF(WIN32)
     list(APPEND LUAJIT_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
   ENDIF()
 ELSE()
-  if(NOT IOS)
-  FIND_LIBRARY(DL_LIBRARY "dl")
-  IF(DL_LIBRARY)
-    SET(CMAKE_REQUIRED_LIBRARIES ${DL_LIBRARY})
-    LIST(APPEND LIBS ${DL_LIBRARY})
-  ENDIF(DL_LIBRARY)
-
-  CHECK_FUNCTION_EXISTS(dlopen LUA_USE_DLOPEN)
-  IF(NOT LUA_USE_DLOPEN)
-    MESSAGE(FATAL_ERROR "Cannot compile a useful lua.
+  IF(APPLE)
+    list(APPEND LUAJIT_DEFINITIONS LUA_USER_H="luauser.h" )
+	  include_directories("${CMAKE_CURRENT_LIST_DIR}")
+  ENDIF()
+  IF(NOT IOS)
+    FIND_LIBRARY(DL_LIBRARY "dl")
+    IF(DL_LIBRARY)
+      SET(CMAKE_REQUIRED_LIBRARIES ${DL_LIBRARY})
+      LIST(APPEND LIBS ${DL_LIBRARY})
+    ENDIF(DL_LIBRARY)
+  
+    CHECK_FUNCTION_EXISTS(dlopen LUA_USE_DLOPEN)
+    IF(NOT LUA_USE_DLOPEN)
+      MESSAGE(FATAL_ERROR "Cannot compile a useful lua.
 Function dlopen() seems not to be supported on your platform.
 Apparently you are not on a Windows platform as well.
 So lua has no way to deal with shared libraries!")
-  ENDIF(NOT LUA_USE_DLOPEN)
-  endif()
+    ENDIF(NOT LUA_USE_DLOPEN)
+  ENDIF()
   check_library_exists(m sin "" LUA_USE_LIBM)
   if ( LUA_USE_LIBM )
     list ( APPEND LIBS m )
@@ -117,82 +123,75 @@ So lua has no way to deal with shared libraries!")
 ENDIF()
 
 ## Detect
-MACRO(LJ_TEST_ARCH stuff)
-  CHECK_C_SOURCE_COMPILES("
-#undef ${stuff}
-#include \"lj_arch.h\"
-#if ${stuff}
-int main() { return 0; }
-#else
-#error \"not defined\"
-#endif
-" ${stuff})
-ENDMACRO()
-
-MACRO(LJ_TEST_ARCH_VALUE stuff value)
-  CHECK_C_SOURCE_COMPILES("
-#undef ${stuff}
-#include \"lj_arch.h\"
-#if ${stuff} == ${value}
-int main() { return 0; }
-#else
-#error \"not defined\"
-#endif
-" ${stuff}_${value})
-ENDMACRO()
+set(TARGET_LJARCH)
+set(TARGET_ARCH)
 
 ## TARGET_LJARCH
-FOREACH(arch X64 X86 ARM ARM64 PPC PPCSPE MIPS)
-  LJ_TEST_ARCH(LJ_TARGET_${arch})
-  if(LJ_TARGET_${arch})
-    STRING(TOLOWER ${arch} TARGET_LJARCH)
-    MESSAGE(STATUS "LuaJIT Target: ${TARGET_LJARCH}")
-    BREAK()
-  ENDIF()
-ENDFOREACH()
+set(ARG_TESTARCH)
+if(IOS)
+  set(ARG_TESTARCH -arch ${IOS_ARCH} -isysroot ${CMAKE_OSX_SYSROOT})
+  set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -arch ${IOS_ARCH}")
+endif()
 
+execute_process(COMMAND ${CMAKE_C_COMPILER}
+  ${ARG_TESTARCH}
+  -E 
+  ${LUAJIT_DIR}/src/lj_arch.h
+  -dM
+  OUTPUT_VARIABLE TARGET_TESTARCH
+)
+
+if ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_X64")
+  set(TARGET_LJARCH x64)
+elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_X86")
+  set(TARGET_LJARCH x86)
+elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_ARM")
+  set(TARGET_LJARCH arm)
+elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_PPC")
+  set(TARGET_LJARCH ppc)
+elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_PPCSPE")
+  set(TARGET_LJARCH ppcspe)
+elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_MIPS")
+  if ("${TARGET_TESTARCH}" MATCHES "MIPSEL")
+    set(TARGET_ARCH "-D__MIPSEL__=1")
+  endif ()
+  set(TARGET_LJARCH mips)
+endif ()
 IF(NOT TARGET_LJARCH)
   MESSAGE(FATAL_ERROR "architecture not supported")
 ELSE()
   MESSAGE(STATUS "LuaJIT target ${TARGET_LJARCH}")
 ENDIF()
 
-
 SET(DASM_ARCH ${TARGET_LJARCH})
 SET(DASM_FLAGS)
-SET(TARGET_ARCH)
 
 LIST(APPEND TARGET_ARCH "LUAJIT_TARGET=LUAJIT_ARCH_${TARGET_LJARCH}")
-LJ_TEST_ARCH_VALUE(LJ_ARCH_BITS 64)
-IF(LJ_ARCH_BITS_64)
+IF ("${TARGET_TESTARCH}" MATCHES "LJ_ARCH_BITS 64")
   SET(DASM_FLAGS ${DASM_FLAGS} -D P64)
 ENDIF()
-LJ_TEST_ARCH_VALUE(LJ_HASJIT 1)
-IF(LJ_HASJIT_1)
+IF ("${TARGET_TESTARCH}" MATCHES "LJ_HASJIT 1")
   SET(DASM_FLAGS ${DASM_FLAGS} -D JIT)
 ENDIF()
-LJ_TEST_ARCH_VALUE(LJ_HASFFI 1)
-IF(LJ_HASFFI_1)
+IF ("${TARGET_TESTARCH}" MATCHES "LJ_HASFFI 1")
   SET(DASM_FLAGS ${DASM_FLAGS} -D FFI)
 ENDIF()
-LJ_TEST_ARCH_VALUE(LJ_DUALNUM 1)
-IF(LJ_DUALNUM_1)
+IF ("${TARGET_TESTARCH}" MATCHES "LJ_DUALNUM 1")
   SET(DASM_FLAGS ${DASM_FLAGS} -D DUALNUM)
 ENDIF()
-LJ_TEST_ARCH_VALUE(LJ_ARCH_HASFPU 1)
-IF(LJ_ARCH_HASFPU_1)
+IF ("${TARGET_TESTARCH}" MATCHES "LJ_ARCH_HASFPU 1")
   SET(DASM_FLAGS ${DASM_FLAGS} -D FPU)
   LIST(APPEND TARGET_ARCH "LJ_ARCH_HASFPU=1")
 ELSE()
   LIST(APPEND TARGET_ARCH "LJ_ARCH_HASFPU=0")
 ENDIF()
-LJ_TEST_ARCH_VALUE(LJ_ABI_SOFTFP 1)
-IF(NOT LJ_ABI_SOFTFP_1)
+IF ("${TARGET_TESTARCH}" MATCHES "LJ_ABI_SOFTFP 1")
+  LIST(APPEND TARGET_ARCH "LJ_ABI_SOFTFP=1")
+ELSE()
   SET(DASM_FLAGS ${DASM_FLAGS} -D HFABI)
   LIST(APPEND TARGET_ARCH "LJ_ABI_SOFTFP=0")
-ELSE()
-  LIST(APPEND TARGET_ARCH "LJ_ABI_SOFTFP=1")
 ENDIF()
+SET(DASM_FLAGS ${DASM_FLAGS} -D VER=)
 IF(WIN32)
   SET(DASM_FLAGS ${DASM_FLAGS} -LN -D WIN)
 ENDIF()
@@ -218,7 +217,6 @@ ENDIF()
 iF(IOS)
   SET(DASM_FLAGS ${DASM_FLAGS} -D IOS)
 ENDIF()
-LIST(APPEND LUAJIT_DEFINITIONS ${TARGET_ARCH})
 
 # Check HOST_COMPILER
 IF(CMAKE_CROSSCOMPILING)
@@ -239,18 +237,24 @@ SET(buildvm_arg "")
 foreach(define IN LISTS TARGET_ARCH)
   SET(buildvm_arg -D${define} ${buildvm_arg})
 endforeach()
-foreach(define IN LISTS LUAJIT_DEFINITIONS)
-  SET(buildvm_arg -D${define} ${buildvm_arg})
-endforeach()
 
 if(IOS)
   set(HOST_ARGS ${HOST_ARGS} -arch i386 -DLUAJIT_OS=LUAJIT_OS_OSX)
+else()
+  list(FIND LIBS m FOUND)
+  if(FOUND) 
+    set(HOST_ARGS ${HOST_ARGS} -lm)
+  endif()
 endif()
+string(REPLACE ";" " " ARGS "${HOST_ARGS} ${buildvm_arg}")
 add_custom_command(OUTPUT ${MINILUA}
   COMMAND ${HOST_COMPILER} ARGS ${HOST_ARGS} ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}
+# COMMENT "${HOST_COMPILER} ${ARGS} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}"
+  COMMENT "Building ${MINILUA}"
 )
 
 # generate buildvm_arch.h
+string(REPLACE ";" " " ARGS "${DASM_FLAGS}")
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
   COMMAND ${MINILUA} ARGS
     ${LUAJIT_DIR}/dynasm/dynasm.lua ${DASM_FLAGS} -o
@@ -258,6 +262,8 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
     ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc
   DEPENDS ${MINILUA}
   MAIN_DEPENDENCY ${LUAJIT_DIR}/dynasm/dynasm.lua
+# COMMENT "${MINILUA} ${LUAJIT_DIR}/dynasm/dynasm.lua ${ARGS} -o ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc"
+  COMMENT "Generating buildvm_arch.h"
 )
 
 # Build buildvm
@@ -272,20 +278,26 @@ foreach(src IN LISTS SRC_BUILDVM)
 endforeach()
 SET(buildvm_arg ${buildvm_arg} -I${LUAJIT_DIR}/src -I${CMAKE_CURRENT_BINARY_DIR})
 
+string(REPLACE ";" " " ARGS "${HOST_ARGS} ${buildvm_arg} ${buildvm_src}")
 add_custom_command(OUTPUT ${BUILDVM}
   COMMAND ${HOST_COMPILER} ARGS
     ${HOST_ARGS}
     ${buildvm_arg} ${buildvm_src} -o ${BUILDVM}
   DEPENDS ${MINILUA}
   MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
+# COMMENT "${HOST_COMPILER} ${ARGS} -o ${BUILDVM}"
+  COMMENT "Building ${BUILDVM}"
 )
 
 macro(add_buildvm_target _target _mode)
+  string(REPLACE ";" " " ARGS "${ARGN}")
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${_target}
     COMMAND ${BUILDVM} ARGS -m ${_mode} -o ${CMAKE_CURRENT_BINARY_DIR}/${_target} ${ARGN}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${BUILDVM}
     MAIN_DEPENDENCY ${ARGN}
+#   COMMENT "${BUILDVM} -m ${_mode} -o ${CMAKE_CURRENT_BINARY_DIR}/${_target} ${ARGS}"
+    COMMENT "Generating ${CMAKE_CURRENT_BINARY_DIR}/${_target}"
   )
 endmacro(add_buildvm_target)
 
@@ -311,21 +323,20 @@ SET(DEPS
 
 ## compile include
 include_directories(
-  ${LUAJIT_DIR}/src
   ${CMAKE_CURRENT_BINARY_DIR}
 )
-set(LJ_COMPILE_FLAGS "-I${LUAJIT_DIR}/dynasm")
 
 ## link liblua
-set_source_files_properties(${LJ_VM_SRC}
-  properties
-  COMPILE_FLAGS ${CMAKE_C_FLAGS}
-)
-IF(IOS)
+if(WITH_SHARED_LUA)
+  if(IOS OR ANDROID)
+    SET(LIBTYPE STATIC)
+  else()
+    SET(LIBTYPE SHARED)
+  endif()
+else()
   SET(LIBTYPE STATIC)
-ELSE()
-  SET(LIBTYPE SHARED)
-ENDIF()
+endif()
+
 IF(WITH_AMALG)
   add_library(luajit-5.1 ${LIBTYPE} ${LUAJIT_DIR}/src/ljamalg.c ${DEPS} )
 ELSE()
@@ -334,7 +345,6 @@ ENDIF()
 SET_TARGET_PROPERTIES(luajit-5.1 PROPERTIES
   PREFIX "lib"
   IMPORT_PREFIX "lib"
-  COMPILE_FLAGS ${LJ_COMPILE_FLAGS}
   COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
   OUTPUT_NAME "lua51"
 )
@@ -347,13 +357,12 @@ IF(WIN32)
   target_link_libraries(luajit luajit-5.1)
 ELSE()
   IF(WITH_AMALG)
-    add_executable(luajit ${LUAJIT_DIR}/src/luajit.c ${LUAJIT_DIR}/src/ljamalg.c ${DEPS})
+    add_executable(luajit ${LUAJIT_DIR}/src/luajit.c)
   ELSE()
-    add_executable(luajit ${LUAJIT_DIR}/src/luajit.c ${SRC_LJCORE} ${DEPS})
+    add_executable(luajit ${LUAJIT_DIR}/src/luajit.c)
   ENDIF()
-  target_link_libraries(luajit ${LIBS})
+  target_link_libraries(luajit luajit-5.1 ${LIBS})
   SET_TARGET_PROPERTIES(luajit PROPERTIES
-    COMPILE_FLAGS ${LJ_COMPILE_FLAGS}
     COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
     ENABLE_EXPORTS ON
   )
@@ -362,11 +371,11 @@ ENDIF()
 MACRO(LUAJIT_add_custom_commands luajit_target)
   SET(target_srcs "")
   IF(ANDROID)
-    SET(LJDUMP_OPT "-b -a arm -o linux")
+    SET(LJDUMP_OPT -b -a arm -o linux)
   ELSEIF(IOS)
-    SET(LJDUMP_OPT "-b -a arm -o osx")
+    SET(LJDUMP_OPT -b -a arm -o osx)
   ELSE()
-    SET(LJDUMP_OPT "-b")
+    SET(LJDUMP_OPT -b)
   ENDIF()
   FOREACH(file ${ARGN})
     IF(${file} MATCHES ".*\\.lua$")
@@ -380,17 +389,20 @@ MACRO(LUAJIT_add_custom_commands luajit_target)
 
       set(generated_file "${CMAKE_BINARY_DIR}/jitted_tmp/${stripped_file}_${luajit_target}_generated${CMAKE_C_OUTPUT_EXTENSION}")
       IF(IOS)
-        set(CMD /usr/local/bin/luajit)
-      else()
         set(CMD luajit)
+      else()
+        set(CMD ${CMAKE_CURRENT_BINARY_DIR}/luajit)
       endif()
+      string(REPLACE ";" " " LJDUMP_OPT_STR "${LJDUMP_OPT}")
+
       add_custom_command(
         OUTPUT ${generated_file}
         MAIN_DEPENDENCY ${source_file}
         DEPENDS luajit
-        COMMAND "${CMD} ${LJDUMP_OPT} ${source_file} ${generated_file}"
-        COMMENT "luajit ${LJDUMP_OPT} ${source_file} ${generated_file}"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${CMD} ${LJDUMP_OPT} ${source_file} ${generated_file}
+#       COMMENT "luajit ${LJDUMP_OPT_STR} ${source_file} ${generated_file}"
+        COMMENT "Generating ${generated_file}"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_DIR}
       )
       get_filename_component(basedir ${generated_file} PATH)
       file(MAKE_DIRECTORY ${basedir})
@@ -407,6 +419,10 @@ MACRO(LUAJIT_add_custom_commands luajit_target)
     ENDIF(${file} MATCHES ".*\\.lua$")
   ENDFOREACH(file)
 ENDMACRO()
+
+MACRO(LUA_ADD_CUSTOM luajit_target)
+  LUAJIT_add_custom_commands(${luajit_target} ${ARGN})
+ENDMACRO(LUA_ADD_CUSTOM luajit_target)
 
 MACRO(LUA_ADD_EXECUTABLE luajit_target)
   LUAJIT_add_custom_commands(${luajit_target} ${ARGN})

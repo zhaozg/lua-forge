@@ -14,6 +14,9 @@ ELSE()
   SET(LUA_DIR ${CMAKE_CURRENT_LIST_DIR}/../lua CACHE PATH "location of lua sources")
 ENDIF()
 
+FILE(GLOB jit_files ${LUA_DIR}/../etc/*.lua)
+FILE(COPY ${jit_files} DESTINATION ${CMAKE_BINARY_DIR})
+
 SET(CMAKE_REQUIRED_INCLUDES
   ${LUA_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -95,7 +98,16 @@ SET(SRC_LUACORE
 )
 
 ## GENERATE
-add_library(lualib STATIC ${SRC_LUACORE} )
+if(WITH_SHARED_LUA)
+  if(IOS OR ANDROID)
+    SET(LIBTYPE STATIC)
+  else()
+    SET(LIBTYPE SHARED)
+  endif()
+else()
+  SET(LIBTYPE STATIC)
+endif()
+add_library(lualib ${LIBTYPE} ${SRC_LUACORE} )
 set(LUA_COMPILE_DEFINITIONS)
 IF(ANDROID OR IOS)
   list(APPEND LUA_COMPILE_DEFINITIONS LUA_USER_H="luauser.h" )
@@ -118,6 +130,7 @@ ENDIF()
 
 target_link_libraries (lualib ${LIBS} )
 set_target_properties (lualib PROPERTIES OUTPUT_NAME "lua53")
+list(APPEND LIB_LIST lualib)
 
 add_executable(lua ${LUA_DIR}/lua.c)
 IF(WIN32)
@@ -127,6 +140,10 @@ ELSE()
   SET_TARGET_PROPERTIES(lua PROPERTIES ENABLE_EXPORTS ON)
 ENDIF(WIN32)
 
+SET(LUA_CMD lua)
+IF(IOS OR  ANDROID)
+  SET(LUA_CMD lua32)
+ENDIF()
 MACRO(LUA_add_custom_commands luajit_target)
   SET(target_srcs "")
   FOREACH(file ${ARGN})
@@ -145,11 +162,11 @@ MACRO(LUA_add_custom_commands luajit_target)
         OUTPUT ${generated_file}
         MAIN_DEPENDENCY ${source_file}
         DEPENDS lua
-        COMMAND lua
-	ARGS "${CMAKE_CURRENT_LIST_DIR}/luac.lua"
+        COMMAND ${LUA_CMD}
+        ARGS "${CMAKE_BINARY_DIR}/luac.lua"
           ${source_file}
           ${generated_file}
-        COMMENT "Building Lua ${source_file}: ${generated_file}"
+          COMMENT "lua ${CMAKE_BINARY_DIR}/luac.lua ${source_file} ${generated_file}"
       )
 
       get_filename_component(basedir ${generated_file} PATH)
@@ -166,6 +183,10 @@ MACRO(LUA_add_custom_commands luajit_target)
     ENDIF(${file} MATCHES ".*\\.lua$")
   ENDFOREACH(file)
 ENDMACRO()
+
+MACRO(LUA_ADD_CUSTOM luajit_target)
+  LUA_add_custom_commands(${luajit_target} ${ARGN})
+ENDMACRO(LUA_ADD_CUSTOM luajit_target)
 
 MACRO(LUA_ADD_EXECUTABLE luajit_target)
   LUA_add_custom_commands(${luajit_target} ${ARGN})
