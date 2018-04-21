@@ -55,26 +55,22 @@ ifdef LUA_BUILD_TYPE
 	CMAKE_EXTRA_OPTIONS+= -DLUA_BUILD_TYPE=${LUA_BUILD_TYPE}
 endif
 
+.PHONY: build lua luajit
 ##############################################################################
 all: build
 	${MAKE} -C ${OS} ${MAKE_EXTRA_OPTIONS}
 
-build:	$(OS)
+build:
 	echo build for $(OS) $(CMAKE_EXTRA_OPTIONS)
-	
-Linux:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
 
-MINGW64_NT-10.0:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
-MINGW32_NT-10.0:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
-Android:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
-Darwin:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
-iOS:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
+lua:
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=Lua
+	${MAKE} -C ${OS} ${MAKE_EXTRA_OPTIONS}
+
+luajit:
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=LuaJIT
+	${MAKE} -C ${OS} ${MAKE_EXTRA_OPTIONS}
 
 ##############################################################################
 clean:
