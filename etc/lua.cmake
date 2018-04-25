@@ -16,10 +16,11 @@ ENDIF()
 
 FILE(GLOB jit_files ${LUA_DIR}/../etc/*.lua)
 FILE(COPY ${jit_files} DESTINATION ${CMAKE_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/luauser.h DESTINATION ${CMAKE_BINARY_DIR})
 
 SET(CMAKE_REQUIRED_INCLUDES
   ${LUA_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_BINARY_DIR}
 )
 
 # Ugly warnings
@@ -111,7 +112,6 @@ add_library(lualib ${LIBTYPE} ${SRC_LUACORE} )
 set(LUA_COMPILE_DEFINITIONS)
 IF(ANDROID OR IOS)
   list(APPEND LUA_COMPILE_DEFINITIONS LUA_USER_H="luauser.h" )
-  SET(LUA_COMPILE_FLAGS "-I${CMAKE_CURRENT_LIST_DIR}")
 ENDIF()
 IF(NOT WIN32)
   list(APPEND LUA_COMPILE_DEFINITIONS "LUA_USE_POSIX" )
@@ -137,12 +137,17 @@ IF(WIN32)
   target_link_libraries(lua lualib)
 ELSE()
   target_link_libraries(lua lualib ${LIBS})
-  SET_TARGET_PROPERTIES(lua PROPERTIES ENABLE_EXPORTS ON)
+  SET_TARGET_PROPERTIES(lua PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    ENABLE_EXPORTS ON
+  )
 ENDIF(WIN32)
 
-SET(LUA_CMD lua)
-IF(IOS OR  ANDROID)
-  SET(LUA_CMD lua32)
+SET(CMD lua)
+IF(CMAKE_CROSSCOMPILING)
+  SET(CMD lua32)
+ELSE()
+  SET(CMD ${CMAKE_BINARY_DIR}/lua)
 ENDIF()
 MACRO(LUA_add_custom_commands luajit_target)
   SET(target_srcs "")
@@ -157,16 +162,17 @@ MACRO(LUA_add_custom_commands luajit_target)
       string(SUBSTRING ${file} ${_begin} ${_stripped_file_length} stripped_file)
 
       set(generated_file "${CMAKE_BINARY_DIR}/luacode_tmp/${stripped_file}_${luajit_target}_generated.c")
-
+      
       add_custom_command(
         OUTPUT ${generated_file}
         MAIN_DEPENDENCY ${source_file}
         DEPENDS lua
-        COMMAND ${LUA_CMD}
+        COMMAND ${CMD}
         ARGS "${CMAKE_BINARY_DIR}/luac.lua"
           ${source_file}
           ${generated_file}
           COMMENT "lua ${CMAKE_BINARY_DIR}/luac.lua ${source_file} ${generated_file}"
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       )
 
       get_filename_component(basedir ${generated_file} PATH)

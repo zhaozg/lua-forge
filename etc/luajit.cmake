@@ -56,6 +56,8 @@ file (GLOB_RECURSE SRC_BUILDVM  "${LUAJIT_DIR}/src/host/buildvm*.c")
 FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/jit)
 FILE(GLOB jit_files ${LUAJIT_DIR}/src/jit/*.lua)
 FILE(COPY ${jit_files} DESTINATION ${CMAKE_BINARY_DIR}/jit)
+FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/luauser.h DESTINATION ${CMAKE_BINARY_DIR})
+include_directories("${CMAKE_BINARY_DIR}")
 
 # Check Definitions
 set(LUAJIT_DEFINITIONS)
@@ -99,7 +101,6 @@ IF(WIN32)
 ELSE()
   IF(APPLE)
     list(APPEND LUAJIT_DEFINITIONS LUA_USER_H="luauser.h" )
-	  include_directories("${CMAKE_CURRENT_LIST_DIR}")
   ENDIF()
   IF(NOT IOS)
     FIND_LIBRARY(DL_LIBRARY "dl")
@@ -365,6 +366,7 @@ ELSE()
   SET_TARGET_PROPERTIES(luajit PROPERTIES
     COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
     ENABLE_EXPORTS ON
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
 ENDIF()
 
@@ -374,6 +376,8 @@ MACRO(LUAJIT_add_custom_commands luajit_target)
     SET(LJDUMP_OPT -b -a arm -o linux)
   ELSEIF(IOS)
     SET(LJDUMP_OPT -b -a arm -o osx)
+  ELSEIF(Windows)
+    SET(LJDUMP_OPT -b -a x86 -o windows)
   ELSE()
     SET(LJDUMP_OPT -b)
   ENDIF()
@@ -388,10 +392,10 @@ MACRO(LUAJIT_add_custom_commands luajit_target)
       string(SUBSTRING ${file} ${_begin} ${_stripped_file_length} stripped_file)
 
       set(generated_file "${CMAKE_BINARY_DIR}/jitted_tmp/${stripped_file}_${luajit_target}_generated${CMAKE_C_OUTPUT_EXTENSION}")
-      IF(IOS)
+      IF(CMAKE_CROSSCOMPILING)
         set(CMD luajit)
       else()
-        set(CMD ${CMAKE_CURRENT_BINARY_DIR}/luajit)
+        set(CMD ${CMAKE_BINARY_DIR}/luajit)
       endif()
       string(REPLACE ";" " " LJDUMP_OPT_STR "${LJDUMP_OPT}")
 
@@ -402,7 +406,7 @@ MACRO(LUAJIT_add_custom_commands luajit_target)
         COMMAND ${CMD} ${LJDUMP_OPT} ${source_file} ${generated_file}
 #       COMMENT "luajit ${LJDUMP_OPT_STR} ${source_file} ${generated_file}"
         COMMENT "Generating ${generated_file}"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_DIR}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       )
       get_filename_component(basedir ${generated_file} PATH)
       file(MAKE_DIRECTORY ${basedir})
