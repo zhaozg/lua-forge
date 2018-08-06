@@ -4,7 +4,7 @@ else
 	OS:=$(shell uname -s)
 endif
 
-CMAKE_FLAGS+= -H. -B${OS} 
+CMAKE_FLAGS+= -H. -B${OS}
 ifdef BUILDTYPE
 	BUILDTYPE := Release
 endif
@@ -19,7 +19,7 @@ ifeq ($(OS),Android)
 	CMAKE_EXTRA_OPTIONS+=-DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=19 \
 	  -DCMAKE_ANDROID_ARCH_ABI=armeabi -DCMAKE_ANDROID_NDK=${ANDROID_NDK} \
 	  -DCMAKE_MAKE_PROGRAM=${MAKE} \
-	  -DHOST_COMPILER=gcc -DHOST_LINKER=ld
+	  -DHOST_COMPILER=gcc -DHOST_LINKER=ld -DHOST_BITS=-m32
 endif
 
 ifeq ($(OS),iOS)
@@ -43,6 +43,7 @@ ifdef WITHOUT_AMALG
 	CMAKE_FLAGS+= -DWITH_AMALG=OFF
 endif
 
+#Disable NPROCS
 #~ ifdef NPROCS
 	#~ MAKE_EXTRA_OPTIONS+= -j${NPROCS}
 #~ endif

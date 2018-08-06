@@ -15,4 +15,4 @@
 	url = https://github.com/LuaJIT/LuaJIT-test-cleanup.git
 [submodule "thirdparty/ffi"]
 	path = thirdparty/ffi
-	url = https://github.com/facebookarchive/luaffifb.git
+	url = https://github.com/zhaozg/lua-ffi.git

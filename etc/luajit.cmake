@@ -31,34 +31,6 @@ MARK_AS_ADVANCED(LUAJIT_DISABLE_FFI LUAJIT_ENABLE_LUA52COMPAT LUAJIT_DISABLE_JIT
 
 OPTION(WITH_AMALG "Build eveything in one shot (needs memory)" ON)
 
-## Source Lists
-set(SRC_LJLIB
-  ${LUAJIT_DIR}/src/lib_base.c
-  ${LUAJIT_DIR}/src/lib_math.c
-  ${LUAJIT_DIR}/src/lib_bit.c
-  ${LUAJIT_DIR}/src/lib_string.c
-  ${LUAJIT_DIR}/src/lib_table.c
-  ${LUAJIT_DIR}/src/lib_io.c
-  ${LUAJIT_DIR}/src/lib_os.c
-  ${LUAJIT_DIR}/src/lib_package.c
-  ${LUAJIT_DIR}/src/lib_debug.c
-  ${LUAJIT_DIR}/src/lib_jit.c
-  ${LUAJIT_DIR}/src/lib_ffi.c
-)
-set(SRC_LIBAUX 
-  ${LUAJIT_DIR}/src/lib_aux.c
-  ${LUAJIT_DIR}/src/lib_init.c
-)
-file (GLOB_RECURSE SRC_LJCORE   "${LUAJIT_DIR}/src/lj_*.c")
-list (APPEND SRC_LJCORE ${LJLIB} ${SRC_LIBAUX})
-file (GLOB_RECURSE SRC_BUILDVM  "${LUAJIT_DIR}/src/host/buildvm*.c")
-
-FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/jit)
-FILE(GLOB jit_files ${LUAJIT_DIR}/src/jit/*.lua)
-FILE(COPY ${jit_files} DESTINATION ${CMAKE_BINARY_DIR}/jit)
-FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/luauser.h DESTINATION ${CMAKE_BINARY_DIR})
-include_directories("${CMAKE_BINARY_DIR}")
-
 # Check Definitions
 set(LUAJIT_DEFINITIONS)
 IF(LUAJIT_DISABLE_FFI)
@@ -77,21 +49,21 @@ IF(LUAJIT_CPU_NOCMOV)
   list(APPEND LUAJIT_DEFINITIONS LUAJIT_CPU_NOCMOV)
 ENDIF()
 
-list(APPEND LUAJIT_DEFINITIONS _FILE_OFFSET_BITS=64)
-list(APPEND LUAJIT_DEFINITIONS _LARGEFILE_SOURCE)
-list(APPEND LUAJIT_DEFINITIONS _FORTIFY_SOURCE)
+#list(APPEND LUAJIT_DEFINITIONS _FILE_OFFSET_BITS=64)
+#list(APPEND LUAJIT_DEFINITIONS _LARGEFILE_SOURCE)
+#list(APPEND LUAJIT_DEFINITIONS _FORTIFY_SOURCE)
 
 # Set LJVM_MODE LJVM
 set(LJVM_MODE)
 set(LJ_VM lj_vm.S)
-if ( WIN32 AND NOT CYGWIN )
-  set ( LJVM_MODE peobj )
-  set ( LJ_VM lj_vm.obj )
-elseif ( APPLE )
-  set ( LJVM_MODE machasm )
-else ()
-  set ( LJVM_MODE elfasm )
-endif ()
+if(IOS OR ANDROID)
+  set(LJVM_MODE elfasm)
+elseif(APPLE)
+  set(LJVM_MODE machasm)
+elseif(WIN32 AND NOT CYGWIN)
+  set(LJVM_MODE peobj)
+  set(LJ_VM lj_vm.obj)
+endif()
 
 # OS Relatived
 IF(WIN32)
@@ -101,6 +73,7 @@ IF(WIN32)
 ELSE()
   IF(APPLE)
     list(APPEND LUAJIT_DEFINITIONS LUA_USER_H="luauser.h" )
+    include_directories(${CMAKE_CURRENT_LIST_DIR})
   ENDIF()
   IF(NOT IOS)
     FIND_LIBRARY(DL_LIBRARY "dl")
@@ -108,7 +81,7 @@ ELSE()
       SET(CMAKE_REQUIRED_LIBRARIES ${DL_LIBRARY})
       LIST(APPEND LIBS ${DL_LIBRARY})
     ENDIF(DL_LIBRARY)
-  
+
     CHECK_FUNCTION_EXISTS(dlopen LUA_USE_DLOPEN)
     IF(NOT LUA_USE_DLOPEN)
       MESSAGE(FATAL_ERROR "Cannot compile a useful lua.
@@ -136,7 +109,7 @@ endif()
 
 execute_process(COMMAND ${CMAKE_C_COMPILER}
   ${ARG_TESTARCH}
-  -E 
+  -E
   ${LUAJIT_DIR}/src/lj_arch.h
   -dM
   OUTPUT_VARIABLE TARGET_TESTARCH
@@ -241,6 +214,8 @@ endforeach()
 
 if(IOS)
   set(HOST_ARGS ${HOST_ARGS} -arch i386 -DLUAJIT_OS=LUAJIT_OS_OSX)
+elseif(ANDROID)
+  set(HOST_ARGS ${HOST_ARGS} -DLUAJIT_OS=LUAJIT_OS_LINUX)
 else()
   list(FIND LIBS m FOUND)
   if(FOUND) 
@@ -249,9 +224,8 @@ else()
 endif()
 string(REPLACE ";" " " ARGS "${HOST_ARGS} ${buildvm_arg}")
 add_custom_command(OUTPUT ${MINILUA}
-  COMMAND ${HOST_COMPILER} ARGS ${HOST_ARGS} ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}
-# COMMENT "${HOST_COMPILER} ${ARGS} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}"
-  COMMENT "Building ${MINILUA}"
+  COMMAND ${HOST_COMPILER} ARGS ${HOST_BITS} ${HOST_ARGS} ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}
+  COMMENT "${HOST_COMPILER} ${HOST_BITS} ${ARGS} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}"
 )
 
 # generate buildvm_arch.h
@@ -263,9 +237,31 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
     ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc
   DEPENDS ${MINILUA}
   MAIN_DEPENDENCY ${LUAJIT_DIR}/dynasm/dynasm.lua
-# COMMENT "${MINILUA} ${LUAJIT_DIR}/dynasm/dynasm.lua ${ARGS} -o ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc"
-  COMMENT "Generating buildvm_arch.h"
+  COMMENT "${MINILUA} ${LUAJIT_DIR}/dynasm/dynasm.lua ${ARGS} -o ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc"
 )
+
+## Source Lists
+SET(SRC_LJLIB
+  ${LUAJIT_DIR}/src/lib_base.c
+  ${LUAJIT_DIR}/src/lib_math.c
+  ${LUAJIT_DIR}/src/lib_bit.c
+  ${LUAJIT_DIR}/src/lib_string.c
+  ${LUAJIT_DIR}/src/lib_table.c
+  ${LUAJIT_DIR}/src/lib_io.c
+  ${LUAJIT_DIR}/src/lib_os.c
+  ${LUAJIT_DIR}/src/lib_package.c
+  ${LUAJIT_DIR}/src/lib_debug.c
+  ${LUAJIT_DIR}/src/lib_jit.c
+  ${LUAJIT_DIR}/src/lib_ffi.c
+)
+
+SET(SRC_LIBAUX 
+  ${LUAJIT_DIR}/src/lib_aux.c
+  ${LUAJIT_DIR}/src/lib_init.c
+)
+file (GLOB_RECURSE SRC_LJCORE   "${LUAJIT_DIR}/src/lj_*.c")
+list (APPEND SRC_LJCORE ${SRC_LJLIB} ${SRC_LIBAUX})
+file (GLOB_RECURSE SRC_BUILDVM  "${LUAJIT_DIR}/src/host/buildvm*.c")
 
 # Build buildvm
 set(BUILDVM ${CMAKE_CURRENT_BINARY_DIR}/buildvm${CMAKE_EXECUTABLE_SUFFIX})
@@ -282,12 +278,12 @@ SET(buildvm_arg ${buildvm_arg} -I${LUAJIT_DIR}/src -I${CMAKE_CURRENT_BINARY_DIR}
 string(REPLACE ";" " " ARGS "${HOST_ARGS} ${buildvm_arg} ${buildvm_src}")
 add_custom_command(OUTPUT ${BUILDVM}
   COMMAND ${HOST_COMPILER} ARGS
+    ${HOST_BITS}
     ${HOST_ARGS}
     ${buildvm_arg} ${buildvm_src} -o ${BUILDVM}
   DEPENDS ${MINILUA}
   MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
-# COMMENT "${HOST_COMPILER} ${ARGS} -o ${BUILDVM}"
-  COMMENT "Building ${BUILDVM}"
+  COMMENT "${HOST_COMPILER} ${HOST_BITS} ${ARGS} -o ${BUILDVM}"
 )
 
 macro(add_buildvm_target _target _mode)
@@ -297,8 +293,7 @@ macro(add_buildvm_target _target _mode)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${BUILDVM}
     MAIN_DEPENDENCY ${ARGN}
-#   COMMENT "${BUILDVM} -m ${_mode} -o ${CMAKE_CURRENT_BINARY_DIR}/${_target} ${ARGS}"
-    COMMENT "Generating ${CMAKE_CURRENT_BINARY_DIR}/${_target}"
+    COMMENT "${BUILDVM} -m ${_mode} -o ${CMAKE_CURRENT_BINARY_DIR}/${_target} ${ARGS}"
   )
 endmacro(add_buildvm_target)
 
@@ -341,7 +336,9 @@ endif()
 IF(WITH_AMALG)
   add_library(luajit-5.1 ${LIBTYPE} ${LUAJIT_DIR}/src/ljamalg.c ${DEPS} )
 ELSE()
-  add_library(luajit-5.1 ${LIBTYPE} ${SRC_LJCORE} ${DEPS} )
+  string(REPLACE ";" " " SRC_STR "${SRC_LJCORE}")
+  message(${SRC_STR})
+  add_library(luajit-5.1 ${SRC_LJCORE} ${DEPS} )
 ENDIF()
 SET_TARGET_PROPERTIES(luajit-5.1 PROPERTIES
   PREFIX "lib"
@@ -353,21 +350,25 @@ target_link_libraries (luajit-5.1 ${LIBS} )
 list(APPEND LIB_LIST luajit-5.1)
 
 ## build luajit
+add_executable(luajit ${LUAJIT_DIR}/src/luajit.c)
 IF(WIN32)
-  add_executable(luajit ${LUAJIT_DIR}/src/luajit.c)
   target_link_libraries(luajit luajit-5.1)
 ELSE()
-  IF(WITH_AMALG)
-    add_executable(luajit ${LUAJIT_DIR}/src/luajit.c)
-  ELSE()
-    add_executable(luajit ${LUAJIT_DIR}/src/luajit.c)
-  ENDIF()
   target_link_libraries(luajit luajit-5.1 ${LIBS})
-  SET_TARGET_PROPERTIES(luajit PROPERTIES
-    COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
-    ENABLE_EXPORTS ON
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-  )
+  IF(APPLE)
+    SET_TARGET_PROPERTIES(luajit PROPERTIES
+      COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
+      ENABLE_EXPORTS ON
+      LINK_FLAGS "-flat_namespace -undefined suppress"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+  ELSE()
+    SET_TARGET_PROPERTIES(luajit PROPERTIES
+      COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
+      ENABLE_EXPORTS ON
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+  ENDIF()
 ENDIF()
 
 MACRO(LUAJIT_add_custom_commands luajit_target)
