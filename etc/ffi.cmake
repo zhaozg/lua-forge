@@ -30,17 +30,17 @@ target_link_libraries (ffi lualib)
 #add_custom_command(
 #  TARGET ffi
 #  PRE_BUILD
-#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x86.h -LN ${FFI_DIR}/call_x86.dasc 
-#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x64.h -D X64 -LN ${FFI_DIR}/call_x86.dasc 
-#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x64win.h -D X64 -D X64WIN ${FFI_DIR}/call_x86.dasc 
-#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_arm.h -LNE ${FFI_DIR}/call_arm.dasc 
+#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x86.h -LN ${FFI_DIR}/call_x86.dasc
+#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x64.h -D X64 -LN ${FFI_DIR}/call_x86.dasc
+#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x64win.h -D X64 -D X64WIN ${FFI_DIR}/call_x86.dasc
+#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_arm.h -LNE ${FFI_DIR}/call_arm.dasc
 #  COMMENT "Generating Header Files"
 #  WORKING_DIRECTORY ${CMAKE_CURRENT_DIR}
 #)
 SET_TARGET_PROPERTIES(ffi PROPERTIES
   PREFIX "lib"
   IMPORT_PREFIX "lib"
-  COMPILE_FLAGS "-I${FFI_DIR} -I{CMAKE_CURRENT_BINARY_DIR}"
+  COMPILE_FLAGS "-I${FFI_DIR} -I{CMAKE_CURRENT_BINARY_DIR} -Wunused-function"
   OUTPUT_NAME "ffi"
 )
 list(APPEND LIB_LIST ffi)

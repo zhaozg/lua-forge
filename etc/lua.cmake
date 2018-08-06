@@ -112,6 +112,7 @@ add_library(lualib ${LIBTYPE} ${SRC_LUACORE} )
 set(LUA_COMPILE_DEFINITIONS)
 IF(ANDROID OR IOS)
   list(APPEND LUA_COMPILE_DEFINITIONS LUA_USER_H="luauser.h" )
+  include_directories(${CMAKE_BINARY_DIR})
 ENDIF()
 IF(NOT WIN32)
   list(APPEND LUA_COMPILE_DEFINITIONS "LUA_USE_POSIX" )
@@ -162,7 +163,7 @@ MACRO(LUA_add_custom_commands luajit_target)
       string(SUBSTRING ${file} ${_begin} ${_stripped_file_length} stripped_file)
 
       set(generated_file "${CMAKE_BINARY_DIR}/luacode_tmp/${stripped_file}_${luajit_target}_generated.c")
-      
+
       add_custom_command(
         OUTPUT ${generated_file}
         MAIN_DEPENDENCY ${source_file}

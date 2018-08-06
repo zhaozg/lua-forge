@@ -1,17 +1,18 @@
+#!/bin/sh
 
-#~ * $0 £º¼´ÃüÁî±¾Éí£¬Ïàµ±ÓÚc/c++ÖĞµÄargv[0]
-#~ * $1 £ºµÚÒ»¸ö²ÎÊı.
-#~ * $2, $3, $4 ... £ºµÚ2¡¢3¡¢4¸ö²ÎÊı£¬ÒÀ´ÎÀàÍÆ¡£
-#~ * $#  ²ÎÊıµÄ¸öÊı£¬²»°üÀ¨ÃüÁî±¾Éí
-#~ * $@ £º²ÎÊı±¾ÉíµÄÁĞ±í£¬Ò²²»°üÀ¨ÃüÁî±¾Éí
-#~ * $* £ººÍ$@ÏàÍ¬£¬µ«"$*" ºÍ "$@"(¼ÓÒıºÅ)²¢²»Í¬£¬"$*"½«ËùÓĞµÄ²ÎÊı½âÊÍ³ÉÒ»¸ö×Ö·û´®£¬¶ø"$@"ÊÇÒ»¸ö²ÎÊıÊı×é¡£
-    
+#~ * $0 ï¼šå³å‘½ä»¤æœ¬èº«ï¼Œç›¸å½“äºc/c++ä¸­çš„argv[0]
+#~ * $1 ï¼šç¬¬ä¸€ä¸ªå‚æ•°.
+#~ * $2, $3, $4 ... ï¼šç¬¬2ã€3ã€4ä¸ªå‚æ•°ï¼Œä¾æ¬¡ç±»æ¨ã€‚
+#~ * $#  å‚æ•°çš„ä¸ªæ•°ï¼Œä¸åŒ…æ‹¬å‘½ä»¤æœ¬èº«
+#~ * $@ ï¼šå‚æ•°æœ¬èº«çš„åˆ—è¡¨ï¼Œä¹Ÿä¸åŒ…æ‹¬å‘½ä»¤æœ¬èº«
+#~ * $* ï¼šå’Œ$@ç›¸åŒï¼Œä½†"$*" å’Œ "$@"(åŠ å¼•å·)å¹¶ä¸åŒï¼Œ"$*"å°†æ‰€æœ‰çš„å‚æ•°è§£é‡Šæˆä¸€ä¸ªå­—ç¬¦ä¸²ï¼Œè€Œ"$@"æ˜¯ä¸€ä¸ªå‚æ•°æ•°ç»„ã€‚
+
 ### Process arguments
 
 #Variable list
 ## LUA, ANDROID
 
-#default 
+#default
 Lua=lua
 
 #process arguments
@@ -43,7 +44,7 @@ do
  esac
 done
 
-#check 
+#check
 echo "$Lua $NDK $NDKABI $NDKVER $EXTRAS"
 
 if [ "$NDK" == "" ]
@@ -51,25 +52,25 @@ then
   cd $Lua
   make $EXTRAS
 else
- 
+
 #  NDK=/e/tools/android/android-ndk-r15c
   if [  "$NDKABI" == ""  ]
   then
     NDKABI=19
-  if
+  fi
 
   #NDKVER=$NDK/toolchains/arm-linux-androideabi-4.9
   if [ "$NDKVER" == "" ]
   then
     NDKVER=$NDK/toolchains/arm-linux-androideabi-4.9
   fi
-  
+
   #NDKP=$NDKVER/prebuilt/windows-x86_64/bin/arm-linux-androideabi-
   if [ "$NDKP" == "" ]
   then
     echo Please given  NDKP follow by -V
     return
-  fi  
+  fi
   NDKF="--sysroot=$NDK/platforms/android-$NDKABI/arch-arm"
 
   if [ "$Lua" == "lua" ]
@@ -83,7 +84,6 @@ else
   else
     cd $Lua
     make HOST_CC="gcc -m32" CROSS=$NDKP TARGET_FLAGS="$NDKF" TARGET_SYS=LINUX  $EXTRAS
-  fi
   fi
 fi
 
