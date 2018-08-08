@@ -5,7 +5,7 @@
 # Redistribution and use of this file is allowed according to the terms of the MIT license.
 # Debugged and (now seriously) modified by Ronan Collobert, for Torch7
 
-#project(LuaJIT C ASM)
+project(LuaJIT C ASM)
 
 IF(DEFINED ENV{LUAJIT_DIR})
   SET(LUAJIT_DIR $ENV{LUAJIT_DIR})
@@ -58,15 +58,15 @@ endif()
 # Set LJVM_MODE LJVM
 set(LJVM_MODE)
 set(LJ_VM lj_vm.S)
-if(IOS OR ANDROID)
+if(ANDROID)
   set(LJVM_MODE elfasm)
-elseif(APPLE)
+elseif(IOS OR APPLE)
   set(LJVM_MODE machasm)
 elseif(WIN32 AND NOT CYGWIN)
   set(LJVM_MODE peobj)
   set(LJ_VM lj_vm.obj)
 endif()
-
+message(WARNING "LJ_VM ${LJ_VM} LJVM_MODE ${LJVM_MODE}")
 # OS Relatived
 IF(WIN32)
   IF(MSVC)
@@ -108,7 +108,6 @@ if(IOS)
   set(ARG_TESTARCH -arch ${IOS_ARCH} -isysroot ${CMAKE_OSX_SYSROOT})
   set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -arch ${IOS_ARCH}")
 endif()
-
 execute_process(COMMAND ${CMAKE_C_COMPILER}
   ${ARG_TESTARCH}
   -E
@@ -143,6 +142,7 @@ SET(DASM_ARCH ${TARGET_LJARCH})
 SET(DASM_FLAGS)
 
 LIST(APPEND TARGET_ARCH "LUAJIT_TARGET=LUAJIT_ARCH_${TARGET_LJARCH}")
+LIST(APPEND LUAJIT_DEFINITIONS "LUAJIT_TARGET=LUAJIT_ARCH_${TARGET_LJARCH}")
 IF ("${TARGET_TESTARCH}" MATCHES "LJ_ARCH_BITS 64")
   SET(DASM_FLAGS ${DASM_FLAGS} -D P64)
 ENDIF()
@@ -220,7 +220,7 @@ elseif(ANDROID)
   set(HOST_ARGS ${HOST_ARGS} -DLUAJIT_OS=LUAJIT_OS_LINUX)
 else()
   list(FIND LIBS m FOUND)
-  if(FOUND) 
+  if(FOUND)
     set(HOST_ARGS ${HOST_ARGS} -lm)
   endif()
 endif()
@@ -373,8 +373,8 @@ ELSE()
   ENDIF()
 ENDIF()
 
+SET(target_srcs "")
 MACRO(LUAJIT_add_custom_commands luajit_target)
-  SET(target_srcs "")
   IF(ANDROID)
     SET(LJDUMP_OPT -b -a arm -o linux)
   ELSEIF(IOS)
@@ -407,8 +407,7 @@ MACRO(LUAJIT_add_custom_commands luajit_target)
         MAIN_DEPENDENCY ${source_file}
         DEPENDS luajit
         COMMAND ${CMD} ${LJDUMP_OPT} ${source_file} ${generated_file}
-#       COMMENT "luajit ${LJDUMP_OPT_STR} ${source_file} ${generated_file}"
-        COMMENT "Generating ${generated_file}"
+        COMMENT "luajit ${LJDUMP_OPT_STR} ${source_file} ${generated_file}"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       )
       get_filename_component(basedir ${generated_file} PATH)
