@@ -169,10 +169,10 @@ MACRO(LUA_add_custom_commands luajit_target)
         MAIN_DEPENDENCY ${source_file}
         DEPENDS lua
         COMMAND ${CMD}
-        ARGS "${CMAKE_BINARY_DIR}/luac.lua"
+        ARGS "${CMAKE_BINARY_DIR}/lua2c.lua"
           ${source_file}
           ${generated_file}
-          COMMENT "lua ${CMAKE_BINARY_DIR}/luac.lua ${source_file} ${generated_file}"
+          COMMENT "lua ${CMAKE_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}"
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       )
 

@@ -1,98 +1,87 @@
---[[
-  Copyright 2014 The Luvit Authors. All Rights Reserved.
+-- luac.lua - partial reimplementation of luac in Lua.
+-- http://lua-users.org/wiki/LuaCompilerInLua
+-- David Manura et al.
+-- Licensed under the same terms as Lua (MIT license).
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+local outfile = 'luac.out'
 
-      http://www.apache.org/licenses/LICENSE-2.0
+-- Parse options.
+local chunks = {}
+local allowoptions = true
+local iserror = false
+local parseonly = false
+while arg[1] do
+  if     allowoptions and arg[1] == '-' then
+    chunks[#chunks + 1] = arg[1]
+    allowoptions = false
+  elseif allowoptions and arg[1] == '-l' then
+    io.stderr:write('-l option not implemented\n')
+    iserror = true
+  elseif allowoptions and arg[1] == '-o' then
+    outfile = assert(arg[2], '-o needs argument')
+    table.remove(arg, 1)
+  elseif allowoptions and arg[1] == '-p' then
+    parseonly = true
+  elseif allowoptions and arg[1] == '-s' then
+    io.stderr:write("-s option ignored\n")
+  elseif allowoptions and arg[1] == '-v' then
+    io.stdout:write(_VERSION .. " Copyright (C) 1994-2008 Lua.org, PUC-Rio\n")
+  elseif allowoptions and arg[1] == '--' then
+    allowoptions = false
+  elseif allowoptions and arg[1]:sub(1,1) == '-' then
+    io.stderr:write("luac: unrecognized option '" .. arg[1] .. "'\n")
+    iserror = true
+    break
+  else
+    chunks[#chunks + 1] = arg[1]
+  end
+  table.remove(arg, 1)
+end
+if #chunks == 0 then
+  io.stderr:write("luac: no input files given\n")
+  iserror = true
+end
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-s
+if iserror then
+  io.stdout:write[[
+usage: luac [options] [filenames].
+Available options are:
+  -        process stdin
+  -l       list
+  -o name  output to file 'name' (default is "luac.out")
+  -p       parse only
+  -s       strip debug information
+  -v       show version information
+  --       stop handling options
 ]]
-local src, gen = ...
-
-local chunk = assert(loadfile(src, nil, '@'..src))
-local bytecode = string.dump(chunk)
-
-local function basename(name)
-   local base = name
-   if base:match "[/\\]" then
-      base = name:match("^.*[/\\](.*)$")
-   end
-   base = base:gsub("^%.", "_")
-   if base:match "%." then
-      base = base:match("^(.*)%."):gsub("%.", "_")
-   end
-   return base
+  os.exit(1)
 end
 
-local function escapefn(name)
-   return '"'..
-      name:gsub('\\', '\\\\')
-          :gsub('\n', '\\n')
-          :gsub('\r', '\\r')
-          :gsub('"', '\\"')..'"'
+-- Load/compile chunks.
+for i,filename in ipairs(chunks) do
+  chunks[i] = assert(loadfile(filename ~= '-' and filename or nil))
 end
 
-local function write_chunk(s)
-   local t = { "{\n       " };
-   local cc = 7
-   for i = 1, #s do
-      local c = string.byte(s, i, i)
-      local ss = (" 0x%X"):format(c)
-      if cc + #ss > 77 then
-         t[#t+1] = "\n       "
-         t[#t+1] = ss
-         cc = 7 + #ss
-         if i ~= #s then
-            t[#t+1] = ","
-            cc = cc + 1
-         end
-      else
-         t[#t+1] = ss
-         cc = cc + #ss
-         if i ~= #s then
-            t[#t+1] = ","
-            cc = cc + 1
-         end
-      end
-   end
-   t[#t+1] = "\n    }"
-   return (table.concat(t))
+if parseonly then
+  os.exit(0)
 end
 
-local function W(...)
-   io.write(...)
-   return W
+-- Combine chunks.
+if #chunks == 1 then
+  chunks = chunks[1]
+else
+  -- Note: the reliance on loadstring is possibly not ideal,
+  -- though likely unavoidable.
+  local ts = { "local loadstring=loadstring;"  }
+  for i,f in ipairs(chunks) do
+    ts[i] = ("loadstring%q(...);"):format(string.dump(f))
+  end
+  --possible extension: ts[#ts] = 'return ' .. ts[#ts]
+  chunks = assert(loadstring(table.concat(ts)))
 end
 
-io.output(gen)
-W [[
-/* generated source for Lua codes */
-
-#ifndef LUA_LIB
-# define LUA_LIB
-#endif
-#include <lua.h>
-#include <lauxlib.h>
-
-LUALIB_API int luaopen_]](basename(src))[[(lua_State *L) {
-    size_t len = ]](#bytecode)[[;
-    const char chunk[] = ]](write_chunk(bytecode))[[;
-
-    if (luaL_loadbuffer(L, chunk, len, ]](escapefn(src))[[) != 0)
-        lua_error(L);
-    lua_insert(L, 1);
-    lua_call(L, lua_gettop(L)-1, LUA_MULTRET);
-    return lua_gettop(L);
-}
-
-]]
-io.close()
-
+-- Output.
+local out = outfile == '-' and io.stdout or assert(io.open(outfile, "wb"))
+out:write(string.dump(chunks))
+if out ~= io.stdout then out:close() end
 
