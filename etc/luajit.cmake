@@ -16,6 +16,7 @@ MESSAGE(STATUS "LUAJIT_DIR is ${LUAJIT_DIR}")
 
 FILE(GLOB lua_files $${CMAKE_CURRENT_LIST_DIR}/*.lua)
 FILE(COPY ${lua_files} DESTINATION ${CMAKE_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/lua2c.lua DESTINATION ${CMAKE_BINARY_DIR})
 FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/luauser.h DESTINATION ${CMAKE_BINARY_DIR})
 
 # Various includes
@@ -406,12 +407,12 @@ IF(LUA2C)
         add_custom_command(
           OUTPUT ${generated_file}
           MAIN_DEPENDENCY ${source_file}
-          DEPENDS lua
+          DEPENDS luajit
           COMMAND ${CMD}
           ARGS "${CMAKE_BINARY_DIR}/lua2c.lua"
             ${source_file}
             ${generated_file}
-            COMMENT "lua ${CMAKE_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}"
+            COMMENT "luajit ${CMAKE_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}"
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
 
