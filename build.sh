@@ -20,7 +20,7 @@ while [ -n "$1" ]
 do
   case "$1" in
     -?|-h)
-	return;;
+      return;;
     -L)
       Lua="$2"
       shift 2;;
@@ -52,7 +52,6 @@ then
   cd $Lua
   make $EXTRAS
 else
-
 #  NDK=/e/tools/android/android-ndk-r15c
   if [  "$NDKABI" == ""  ]
   then

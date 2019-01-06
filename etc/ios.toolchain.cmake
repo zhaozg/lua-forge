@@ -101,9 +101,6 @@ set (UNIX True)
 set (APPLE True)
 set (IOS True)
 
-include(Platform/Darwin-Clang)
-__darwin_compiler_clang(ASM)
-
 # Get the Xcode version being used.
 execute_process(COMMAND xcodebuild -version
   OUTPUT_VARIABLE XCODE_VERSION
