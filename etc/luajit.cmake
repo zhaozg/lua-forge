@@ -84,6 +84,7 @@ elseif(WIN32 AND NOT CYGWIN)
   set(LJ_VM lj_vm.obj)
 endif()
 message("LJ_VM ${LJ_VM} LJVM_MODE ${LJVM_MODE}")
+
 # OS Relatived
 IF(WIN32)
   IF(MSVC)
