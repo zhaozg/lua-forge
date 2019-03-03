@@ -4,6 +4,7 @@ else
 	OS:=$(shell uname -s)
 endif
 
+ARCH:=$(shell uname -p)
 CMAKE_FLAGS+= -H. -B${OS}
 ifdef BUILDTYPE
 	BUILDTYPE := Release
@@ -13,6 +14,12 @@ ifndef GENERATOR
 endif
 ifndef LUA_ENGINE
 	LUA_ENGINE := LuaJIT
+endif
+
+ifeq ($(OS),Linux)
+ifeq ($(ARCH),aarch64)
+	CMAKE_EXTRA_OPTIONS+= -DHOST_COMPILER=gcc -DHOST_LINKER=ld
+endif
 endif
 
 ifeq ($(OS),Android)
@@ -62,7 +69,8 @@ all: build
 	${MAKE} -C ${OS} ${MAKE_EXTRA_OPTIONS}
 
 build:
-	echo build for $(OS) $(CMAKE_EXTRA_OPTIONS)
+	echo build for $(OS) arch $(ARCH)
+	echo cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
 
 lua:

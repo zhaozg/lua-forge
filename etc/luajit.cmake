@@ -36,18 +36,6 @@ MARK_AS_ADVANCED(LUAJIT_DISABLE_FFI LUAJIT_ENABLE_LUA52COMPAT LUAJIT_DISABLE_JIT
 
 OPTION(WITH_AMALG "Build eveything in one shot (needs memory)" ON)
 
-MACRO(LJ_TEST_ARCH_VALUE stuff value)
-  CHECK_C_SOURCE_COMPILES("
-#undef ${stuff}
-#include \"lj_arch.h\"
-#if ${stuff} == ${value}
-int main() { return 0; }
-#else
-#error \"not defined\"
-#endif
-" ${stuff}_${value})
-ENDMACRO()
-
 # Check Definitions
 set(LUAJIT_DEFINITIONS)
 IF(LUAJIT_DISABLE_FFI)
@@ -73,7 +61,7 @@ if(NOT CMAKE_CROSSCOMPILING)
 endif()
 
 # Set LJVM_MODE LJVM
-set(LJVM_MODE)
+set(LJVM_MODE elfasm)
 set(LJ_VM lj_vm.S)
 if(ANDROID)
   set(LJVM_MODE elfasm)
@@ -116,6 +104,28 @@ So lua has no way to deal with shared libraries!")
   endif ()
 ENDIF()
 
+check_library_exists(m sin "" LUA_USE_LIBM)
+if ( LUA_USE_LIBM )
+  list ( APPEND LIBS m )
+endif ()
+
+if ( CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+  list ( APPEND LIBS pthread c++abi )
+endif ()
+
+## SOURCES
+MACRO(LJ_TEST_ARCH_VALUE stuff value)
+  CHECK_C_SOURCE_COMPILES("
+#undef ${stuff}
+#include \"lj_arch.h\"
+#if ${stuff} == ${value}
+int main() { return 0; }
+#else
+#error \"not defined\"
+#endif
+" ${stuff}_${value})
+ENDMACRO()
+
 ## Detect
 set(TARGET_LJARCH)
 set(TARGET_ARCH)
@@ -138,6 +148,11 @@ if ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_X64")
   set(TARGET_LJARCH x64)
 elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_X86")
   set(TARGET_LJARCH x86)
+elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_ARM64")
+  set(TARGET_LJARCH arm64)
+  if ("${TARGET_TESTARCH}" MATCHES "__AARCH64EB__")
+    SET(TARGET_ARCH "-D__AARCH64EB__=1")
+  endif()
 elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_ARM")
   set(TARGET_LJARCH arm)
 elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_PPC")
@@ -161,8 +176,6 @@ SET(DASM_FLAGS)
 
 LIST(APPEND TARGET_ARCH "LUAJIT_TARGET=LUAJIT_ARCH_${TARGET_LJARCH}")
 LIST(APPEND LUAJIT_DEFINITIONS "LUAJIT_TARGET=LUAJIT_ARCH_${TARGET_LJARCH}")
-message("TARGET_ARCH ${TARGET_ARCH}")
-message("LUAJIT_DEFINITIONS ${LUAJIT_DEFINITIONS}")
 IF ("${TARGET_TESTARCH}" MATCHES "LJ_ARCH_BITS 64")
   SET(DASM_FLAGS ${DASM_FLAGS} -D P64)
 ENDIF()
@@ -218,7 +231,6 @@ ENDIF()
 iF(IOS)
   SET(DASM_FLAGS ${DASM_FLAGS} -D IOS)
 ENDIF()
-message("DASM_FLAGS ${DASM_FLAGS}")
 
 # Check HOST_COMPILER
 IF(CMAKE_CROSSCOMPILING)
@@ -229,8 +241,12 @@ IF(CMAKE_CROSSCOMPILING)
     set(HOST_LINKER ${HOST_COMPILER})
   ENDIF()
 ELSE()
-  set(HOST_COMPILER ${CMAKE_C_COMPILER})
-  set(HOST_LINKER ${CMAKE_LINKER})
+  IF(NOT HOST_COMPILER)
+    set(HOST_COMPILER ${CMAKE_C_COMPILER})
+  ENDIF()
+  IF(NOT HOST_LINKER)
+    set(HOST_LINKER ${CMAKE_LINKER})
+  ENDIF()
 ENDIF()
 
 # Build minilua
@@ -250,10 +266,10 @@ else()
     set(HOST_ARGS ${HOST_ARGS} -lm)
   endif()
 endif()
-string(REPLACE ";" " " ARGS "${HOST_ARGS} ${buildvm_arg}")
+string(REPLACE ";" " " ARGS "${HOST_BITS} ${HOST_ARGS} ${buildvm_arg}")
 add_custom_command(OUTPUT ${MINILUA}
-  COMMAND ${HOST_COMPILER} ARGS ${HOST_BITS} ${HOST_ARGS} ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}
-  COMMENT "${HOST_COMPILER} ${HOST_BITS} ${ARGS} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}"
+  COMMAND ${HOST_COMPILER} ARGS ${HOST_BITS} ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c ${HOST_ARGS} -o ${MINILUA}
+  COMMENT "${HOST_COMPILER} ${ARGS} ${LUAJIT_DIR}/src/host/minilua.c ${HOST_BITS} -o ${MINILUA}"
 )
 
 # generate buildvm_arch.h
@@ -283,7 +299,7 @@ SET(SRC_LJLIB
   ${LUAJIT_DIR}/src/lib_ffi.c
 )
 
-SET(SRC_LIBAUX 
+SET(SRC_LIBAUX
   ${LUAJIT_DIR}/src/lib_aux.c
   ${LUAJIT_DIR}/src/lib_init.c
 )
@@ -365,7 +381,7 @@ IF(WITH_AMALG)
   add_library(luajit-5.1 ${LIBTYPE} ${LUAJIT_DIR}/src/ljamalg.c ${DEPS} )
 ELSE()
   string(REPLACE ";" " " SRC_STR "${SRC_LJCORE}")
-  add_library(luajit-5.1 ${SRC_LJCORE} ${DEPS} )
+  add_library(luajit-5.1 ${LIBTYPE} ${SRC_LJCORE} ${DEPS} )
 ENDIF()
 SET_TARGET_PROPERTIES(luajit-5.1 PROPERTIES
   PREFIX "lib"
@@ -414,7 +430,9 @@ IF(LUA2C)
     SET(target_srcs "")
     FOREACH(file ${ARGN})
       IF(${file} MATCHES ".*\\.lua$")
-        set(file "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+        if(NOT IS_ABSOLUTE ${file})
+          set(file "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+        endif()
         set(source_file ${file})
         string(LENGTH ${CMAKE_SOURCE_DIR} _luajit_source_dir_length)
         string(LENGTH ${file} _luajit_file_length)
@@ -466,13 +484,19 @@ ELSE()
     ELSEIF(IOS)
       SET(LJDUMP_OPT -b -a arm -o osx)
     ELSEIF(WIN32)
-      SET(LJDUMP_OPT -b -a x86 -o windows)
+      if(USE_64BITS)
+        SET(LJDUMP_OPT -b -a x64 -o windows)
+      else()
+        SET(LJDUMP_OPT -b -a x86 -o windows)
+      endif()
     ELSE()
       SET(LJDUMP_OPT -b)
     ENDIF()
     FOREACH(file ${ARGN})
       IF(${file} MATCHES ".*\\.lua$")
-        set(file "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+        if(NOT IS_ABSOLUTE ${file})
+          set(file "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+        endif()
         set(source_file ${file})
         string(LENGTH ${CMAKE_SOURCE_DIR} _luajit_source_dir_length)
         string(LENGTH ${file} _luajit_file_length)
