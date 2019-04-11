@@ -33,6 +33,12 @@ option(LUAJIT_ENABLE_LUA52COMPAT "Enable Lua 5.2 compatibility." ON)
 option(LUAJIT_DISABLE_JIT "Disable JIT." OFF)
 option(LUAJIT_CPU_NOCMOV "Disable NOCMOV." OFF)
 MARK_AS_ADVANCED(LUAJIT_DISABLE_FFI LUAJIT_ENABLE_LUA52COMPAT LUAJIT_DISABLE_JIT LUAJIT_CPU_SSE2 LUAJIT_CPU_NOCMOV)
+option(USE_64BITS "Enable 64 bits." ON)
+
+set(HOST_LUAJIT luajit)
+IF(DEFINED ENV{HOST_LUAJIT})
+  set(HOST_LUAJIT $ENV{HOST_LUAJIT})
+ENDIF()
 
 OPTION(WITH_AMALG "Build eveything in one shot (needs memory)" ON)
 
@@ -148,6 +154,7 @@ if ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_X64")
   set(TARGET_LJARCH x64)
 elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_X86")
   set(TARGET_LJARCH x86)
+  set(USE_64BITS OFF)
 elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_ARM64")
   set(TARGET_LJARCH arm64)
   if ("${TARGET_TESTARCH}" MATCHES "__AARCH64EB__")
@@ -155,6 +162,7 @@ elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_ARM64")
   endif()
 elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_ARM")
   set(TARGET_LJARCH arm)
+  set(USE_64BITS OFF)
 elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_PPC")
   set(TARGET_LJARCH ppc)
 elseif ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_PPCSPE")
@@ -268,6 +276,7 @@ else()
 endif()
 string(REPLACE ";" " " ARGS "${HOST_BITS} ${HOST_ARGS} ${buildvm_arg}")
 add_custom_command(OUTPUT ${MINILUA}
+  MAIN_DEPENDENCY ${LUAJIT_DIR}/src/host/minilua.c
   COMMAND ${HOST_COMPILER} ARGS ${HOST_BITS} ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c ${HOST_ARGS} -o ${MINILUA}
   COMMENT "${HOST_COMPILER} ${ARGS} ${LUAJIT_DIR}/src/host/minilua.c ${HOST_BITS} -o ${MINILUA}"
 )
@@ -279,7 +288,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
     ${LUAJIT_DIR}/dynasm/dynasm.lua ${DASM_FLAGS} -o
     ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
     ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc
-  DEPENDS ${MINILUA}
+  DEPENDS ${MINILUA} ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc
   MAIN_DEPENDENCY ${LUAJIT_DIR}/dynasm/dynasm.lua
   COMMENT "${MINILUA} ${LUAJIT_DIR}/dynasm/dynasm.lua ${ARGS} -o ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc"
 )
@@ -416,12 +425,12 @@ ENDIF()
 
 SET(target_srcs "")
 IF(CMAKE_CROSSCOMPILING)
-  set(CMD luajit)
+  set(CMD ${HOST_LUAJIT})
 else()
   set(CMD ${CMAKE_BINARY_DIR}/luajit)
 endif()
 
-IF(IOS)
+IF(IOS OR ANDROID)
   SET(LUA2C ON)
 ENDIF()
 
@@ -480,9 +489,17 @@ IF(LUA2C)
 ELSE()
   MACRO(LUAJIT_add_custom_commands luajit_target)
     IF(ANDROID)
-      SET(LJDUMP_OPT -b -a arm -o linux)
+      if(USE_64BITS)
+        SET(LJDUMP_OPT -b -a arm64 -o linux)
+      else()
+        SET(LJDUMP_OPT -b -a arm -o linux)
+      endif()
     ELSEIF(IOS)
-      SET(LJDUMP_OPT -b -a arm -o osx)
+      if(USE_64BITS)
+        SET(LJDUMP_OPT -b -a arm64 -o linux)
+      else()
+        SET(LJDUMP_OPT -b -a arm -o linux)
+      endif()
     ELSEIF(WIN32)
       if(USE_64BITS)
         SET(LJDUMP_OPT -b -a x64 -o windows)
