@@ -32,13 +32,18 @@ option(LUAJIT_DISABLE_FFI "Disable FFI." OFF)
 option(LUAJIT_ENABLE_LUA52COMPAT "Enable Lua 5.2 compatibility." ON)
 option(LUAJIT_DISABLE_JIT "Disable JIT." OFF)
 option(LUAJIT_CPU_NOCMOV "Disable NOCMOV." OFF)
-MARK_AS_ADVANCED(LUAJIT_DISABLE_FFI LUAJIT_ENABLE_LUA52COMPAT LUAJIT_DISABLE_JIT LUAJIT_CPU_SSE2 LUAJIT_CPU_NOCMOV)
 option(USE_64BITS "Enable 64 bits." ON)
+option(USE_LUA2C "Use lua2c replace luajit dump." OFF)
+MARK_AS_ADVANCED(LUAJIT_DISABLE_FFI LUAJIT_ENABLE_LUA52COMPAT LUAJIT_DISABLE_JIT LUAJIT_CPU_SSE2 LUAJIT_CPU_NOCMOV)
 
 set(HOST_LUAJIT luajit)
 IF(DEFINED ENV{HOST_LUAJIT})
   set(HOST_LUAJIT $ENV{HOST_LUAJIT})
 ENDIF()
+
+if(IOS OR ANDROID)
+  SET(LUAJIT_DISABLE_JIT ON)
+endif()
 
 OPTION(WITH_AMALG "Build eveything in one shot (needs memory)" ON)
 
@@ -142,6 +147,10 @@ if(IOS)
   set(ARG_TESTARCH -arch ${IOS_ARCH} -isysroot ${CMAKE_OSX_SYSROOT})
   set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -arch ${IOS_ARCH}")
 endif()
+foreach(define IN LISTS LUAJIT_DEFINITIONS)
+  list(APPEND ARG_TESTARCH -D${define})
+endforeach()
+message(STATUS ${ARG_TESTARCH})
 execute_process(COMMAND ${CMAKE_C_COMPILER}
   ${ARG_TESTARCH}
   -E
@@ -265,7 +274,7 @@ foreach(define IN LISTS TARGET_ARCH)
 endforeach()
 
 if(IOS)
-  set(HOST_ARGS ${HOST_ARGS} -arch i386 -DLUAJIT_OS=LUAJIT_OS_OSX)
+  set(HOST_ARGS ${HOST_ARGS} -DLUAJIT_OS=LUAJIT_OS_OSX)
 elseif(ANDROID)
   set(HOST_ARGS ${HOST_ARGS} -DLUAJIT_OS=LUAJIT_OS_LINUX)
 else()
@@ -274,6 +283,11 @@ else()
     set(HOST_ARGS ${HOST_ARGS} -lm)
   endif()
 endif()
+
+foreach(define IN LISTS LUAJIT_DEFINITIONS)
+  list(APPEND HOST_ARGS -D${define})
+endforeach()
+
 string(REPLACE ";" " " ARGS "${HOST_BITS} ${HOST_ARGS} ${buildvm_arg}")
 add_custom_command(OUTPUT ${MINILUA}
   MAIN_DEPENDENCY ${LUAJIT_DIR}/src/host/minilua.c
@@ -283,8 +297,15 @@ add_custom_command(OUTPUT ${MINILUA}
 
 # generate buildvm_arch.h
 string(REPLACE ";" " " ARGS "${DASM_FLAGS}")
+IF(IOS AND NOT USE_64BITS)
+  SET(MINILUA_CMD wine)
+  SET(MINILUA_CMD_ARG ${MINILUA})
+ELSE()
+  SET(MINILUA_CMD ${MINILUA})
+ENDIF()
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
-  COMMAND ${MINILUA} ARGS
+  COMMAND ${MINILUA_CMD} ARGS
+  ${MINILUA_CMD_ARG}
     ${LUAJIT_DIR}/dynasm/dynasm.lua ${DASM_FLAGS} -o
     ${CMAKE_CURRENT_BINARY_DIR}/buildvm_arch.h
     ${LUAJIT_DIR}/src/vm_${DASM_ARCH}.dasc
@@ -339,10 +360,18 @@ add_custom_command(OUTPUT ${BUILDVM}
   COMMENT "${HOST_COMPILER} ${HOST_BITS} ${ARGS} -o ${BUILDVM}"
 )
 
+IF(IOS AND NOT USE_64BITS)
+  SET(BUILDVM_CMD wine)
+  SET(BUILDVM_CMD_ARG ${BUILDVM})
+ELSE()
+  SET(BUILDVM_CMD ${BUILDVM})
+ENDIF()
 macro(add_buildvm_target _target _mode)
   string(REPLACE ";" " " ARGS "${ARGN}")
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${_target}
-    COMMAND ${BUILDVM} ARGS -m ${_mode} -o ${CMAKE_CURRENT_BINARY_DIR}/${_target} ${ARGN}
+    COMMAND ${BUILDVM_CMD} ARGS
+    ${BUILDVM_CMD_ARG}
+    -m ${_mode} -o ${CMAKE_CURRENT_BINARY_DIR}/${_target} ${ARGN}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${BUILDVM}
     MAIN_DEPENDENCY ${ARGN}
@@ -423,20 +452,14 @@ ELSE()
   ENDIF()
 ENDIF()
 
-SET(target_srcs "")
-IF(CMAKE_CROSSCOMPILING)
-  set(CMD ${HOST_LUAJIT})
-else()
-  set(CMD ${CMAKE_BINARY_DIR}/luajit)
-endif()
-
-IF(IOS OR ANDROID)
-  SET(LUA2C ON)
-ENDIF()
-
-IF(LUA2C)
+IF(USE_LUA2C)
   MACRO(LUA_add_custom_commands luajit_target)
     SET(target_srcs "")
+    IF(CMAKE_CROSSCOMPILING)
+      set(CMD ${HOST_LUAJIT})
+    else()
+      set(CMD ${CMAKE_BINARY_DIR}/luajit)
+    endif()
     FOREACH(file ${ARGN})
       IF(${file} MATCHES ".*\\.lua$")
         if(NOT IS_ABSOLUTE ${file})
@@ -455,12 +478,9 @@ IF(LUA2C)
           OUTPUT ${generated_file}
           MAIN_DEPENDENCY ${source_file}
           DEPENDS luajit
-          COMMAND ${CMD}
-          ARGS "${CMAKE_BINARY_DIR}/lua2c.lua"
-            ${source_file}
-            ${generated_file}
-            COMMENT "luajit ${CMAKE_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}"
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+          COMMAND ${CMD} ${CMAKE_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}
+          COMMENT "${CMD} ${CMAKE_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}"
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
 
         get_filename_component(basedir ${generated_file} PATH)
@@ -488,6 +508,12 @@ IF(LUA2C)
   ENDMACRO(LUA_ADD_EXECUTABLE luajit_target)
 ELSE()
   MACRO(LUAJIT_add_custom_commands luajit_target)
+    SET(target_srcs "")
+    IF(CMAKE_CROSSCOMPILING)
+      set(CMD ${HOST_LUAJIT})
+    else()
+      set(CMD ${CMAKE_BINARY_DIR}/luajit)
+    endif()
     IF(ANDROID)
       if(USE_64BITS)
         SET(LJDUMP_OPT -b -a arm64 -o linux)
