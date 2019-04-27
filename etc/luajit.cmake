@@ -144,13 +144,15 @@ set(TARGET_ARCH)
 ## TARGET_LJARCH
 set(ARG_TESTARCH)
 if(IOS)
-  set(ARG_TESTARCH -arch ${IOS_ARCH} -isysroot ${CMAKE_OSX_SYSROOT})
+  list(APPEND ARG_TESTARCH -arch ${IOS_ARCH} -isysroot ${CMAKE_OSX_SYSROOT})
   set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -arch ${IOS_ARCH}")
+endif()
+if(ANDROID AND NOT CMAKE_HOST_WIN32)
+  list(APPEND ARG_TESTARCH -arch ${ANDROID_SYSROOT_ABI} -isysroot ${CMAKE_SYSROOT})
 endif()
 foreach(define IN LISTS LUAJIT_DEFINITIONS)
   list(APPEND ARG_TESTARCH -D${define})
 endforeach()
-message(STATUS ${ARG_TESTARCH})
 execute_process(COMMAND ${CMAKE_C_COMPILER}
   ${ARG_TESTARCH}
   -E
@@ -158,6 +160,8 @@ execute_process(COMMAND ${CMAKE_C_COMPILER}
   -dM
   OUTPUT_VARIABLE TARGET_TESTARCH
 )
+string(REPLACE ";" " " TIPS "${CMAKE_C_COMPILER} ${ARG_TESTARCH} -E ${LUAJIT_DIR}/src/lj_arch.h -dM")
+message(STATUS ${TIPS})
 
 if ("${TARGET_TESTARCH}" MATCHES "LJ_TARGET_X64")
   set(TARGET_LJARCH x64)
@@ -456,7 +460,7 @@ IF(USE_LUA2C)
   MACRO(LUA_add_custom_commands luajit_target)
     SET(target_srcs "")
     IF(CMAKE_CROSSCOMPILING)
-      set(CMD ${HOST_LUAJIT})
+      set(CMD ${HOST_LUAJIT} -joff)
     else()
       set(CMD ${CMAKE_BINARY_DIR}/luajit)
     endif()

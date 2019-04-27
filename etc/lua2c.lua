@@ -15,6 +15,7 @@
 s
 ]]
 local src, gen = ...
+local _, jit = pcall(require, "jit") if jit and jit.off then jit.off() end
 
 local chunk = assert(loadfile(src, nil, '@'..src))
 local bytecode = string.dump(chunk)
