@@ -18,6 +18,7 @@ FILE(GLOB lua_files $${CMAKE_CURRENT_LIST_DIR}/*.lua)
 FILE(COPY ${lua_files} DESTINATION ${CMAKE_BINARY_DIR})
 FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/lua2c.lua DESTINATION ${CMAKE_BINARY_DIR})
 FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/luauser.h DESTINATION ${CMAKE_BINARY_DIR})
+FILE(COPY ${LUAJIT_DIR}/src/jit DESTINATION ${CMAKE_BINARY_DIR})
 
 # Various includes
 INCLUDE(CheckLibraryExists)
@@ -35,11 +36,6 @@ option(LUAJIT_CPU_NOCMOV "Disable NOCMOV." OFF)
 option(USE_64BITS "Enable 64 bits." ON)
 option(USE_LUA2C "Use lua2c replace luajit dump." OFF)
 MARK_AS_ADVANCED(LUAJIT_DISABLE_FFI LUAJIT_ENABLE_LUA52COMPAT LUAJIT_DISABLE_JIT LUAJIT_CPU_SSE2 LUAJIT_CPU_NOCMOV)
-
-set(HOST_LUAJIT luajit)
-IF(DEFINED ENV{HOST_LUAJIT})
-  set(HOST_LUAJIT $ENV{HOST_LUAJIT})
-ENDIF()
 
 if(IOS OR ANDROID)
   SET(LUAJIT_DISABLE_JIT ON)
@@ -296,12 +292,12 @@ string(REPLACE ";" " " ARGS "${HOST_BITS} ${HOST_ARGS} ${buildvm_arg}")
 add_custom_command(OUTPUT ${MINILUA}
   MAIN_DEPENDENCY ${LUAJIT_DIR}/src/host/minilua.c
   COMMAND ${HOST_COMPILER} ARGS ${HOST_BITS} ${buildvm_arg} ${LUAJIT_DIR}/src/host/minilua.c ${HOST_ARGS} -o ${MINILUA}
-  COMMENT "${HOST_COMPILER} ${ARGS} ${LUAJIT_DIR}/src/host/minilua.c ${HOST_BITS} -o ${MINILUA}"
+  COMMENT "${HOST_COMPILER} ${ARGS} ${LUAJIT_DIR}/src/host/minilua.c -o ${MINILUA}"
 )
 
 # generate buildvm_arch.h
 string(REPLACE ";" " " ARGS "${DASM_FLAGS}")
-IF(IOS AND NOT USE_64BITS)
+IF(CMAKE_CROSSCOMPILING)
   SET(MINILUA_CMD wine)
   SET(MINILUA_CMD_ARG ${MINILUA})
 ELSE()
@@ -364,7 +360,7 @@ add_custom_command(OUTPUT ${BUILDVM}
   COMMENT "${HOST_COMPILER} ${HOST_BITS} ${ARGS} -o ${BUILDVM}"
 )
 
-IF(IOS AND NOT USE_64BITS)
+IF(CMAKE_CROSSCOMPILING AND (WIN32 OR NOT USE_64BITS))
   SET(BUILDVM_CMD wine)
   SET(BUILDVM_CMD_ARG ${BUILDVM})
 ELSE()
@@ -391,7 +387,7 @@ add_buildvm_target ( lj_bcdef.h   bcdef   ${SRC_LJLIB} )
 add_buildvm_target ( lj_folddef.h folddef ${LUAJIT_DIR}/src/lj_opt_fold.c )
 add_buildvm_target ( lj_recdef.h  recdef  ${SRC_LJLIB} )
 add_buildvm_target ( lj_libdef.h  libdef  ${SRC_LJLIB} )
-add_buildvm_target ( vmdef.lua    vmdef   ${SRC_LJLIB} )
+add_buildvm_target ( jit/vmdef.lua vmdef  ${SRC_LJLIB} )
 
 SET(DEPS
   ${LJ_VM_SRC}
@@ -400,7 +396,7 @@ SET(DEPS
   ${CMAKE_CURRENT_BINARY_DIR}/lj_libdef.h
   ${CMAKE_CURRENT_BINARY_DIR}/lj_recdef.h
   ${CMAKE_CURRENT_BINARY_DIR}/lj_folddef.h
-  ${CMAKE_CURRENT_BINARY_DIR}/vmdef.lua
+  ${CMAKE_CURRENT_BINARY_DIR}/jit/vmdef.lua
 )
 
 ## compile include
@@ -460,9 +456,13 @@ IF(USE_LUA2C)
   MACRO(LUA_add_custom_commands luajit_target)
     SET(target_srcs "")
     IF(CMAKE_CROSSCOMPILING)
-      set(CMD ${HOST_LUAJIT} -joff)
+      if(NOT HOST_LUAJIT)
+        set(HOST_LUAJIT wine)
+        set(HOST_LUAJIT_ARGS "luajit")
+      endif()
+      set(CMD ${HOST_LUAJIT} ${HOST_LUAJIT_ARGS})
     else()
-      set(CMD ${CMAKE_BINARY_DIR}/luajit)
+      set(CMD luajit)
     endif()
     FOREACH(file ${ARGN})
       IF(${file} MATCHES ".*\\.lua$")
@@ -514,7 +514,11 @@ ELSE()
   MACRO(LUAJIT_add_custom_commands luajit_target)
     SET(target_srcs "")
     IF(CMAKE_CROSSCOMPILING)
-      set(CMD ${HOST_LUAJIT})
+      if(NOT HOST_LUAJIT)
+        set(HOST_LUAJIT wine)
+        set(HOST_LUAJIT_ARGS "luajit")
+      endif()
+      set(CMD ${HOST_LUAJIT} ${HOST_LUAJIT_ARGS})
     else()
       set(CMD ${CMAKE_BINARY_DIR}/luajit)
     endif()
@@ -559,7 +563,7 @@ ELSE()
           MAIN_DEPENDENCY ${source_file}
           DEPENDS luajit
           COMMAND ${CMD} ${LJDUMP_OPT} ${source_file} ${generated_file}
-          COMMENT "luajit ${LJDUMP_OPT_STR} ${source_file} ${generated_file}"
+          COMMENT "${CMD} ${LJDUMP_OPT_STR} ${source_file} ${generated_file}"
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
         get_filename_component(basedir ${generated_file} PATH)
