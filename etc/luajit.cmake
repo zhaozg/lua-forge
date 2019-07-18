@@ -15,10 +15,10 @@ ENDIF()
 MESSAGE(STATUS "LUAJIT_DIR is ${LUAJIT_DIR}")
 
 FILE(GLOB lua_files $${CMAKE_CURRENT_LIST_DIR}/*.lua)
-FILE(COPY ${lua_files} DESTINATION ${CMAKE_BINARY_DIR})
-FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/lua2c.lua DESTINATION ${CMAKE_BINARY_DIR})
-FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/luauser.h DESTINATION ${CMAKE_BINARY_DIR})
-FILE(COPY ${LUAJIT_DIR}/src/jit DESTINATION ${CMAKE_BINARY_DIR})
+FILE(COPY ${lua_files} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/lua2c.lua DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+FILE(COPY ${CMAKE_CURRENT_LIST_DIR}/luauser.h DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+FILE(COPY ${LUAJIT_DIR}/src/jit DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # Various includes
 INCLUDE(CheckLibraryExists)
@@ -88,7 +88,7 @@ IF(WIN32)
 ELSE()
   IF(APPLE)
     ADD_DEFINITIONS(-DLUA_USER_H="luauser.h")
-    include_directories(${CMAKE_BINARY_DIR})
+    include_directories(${CMAKE_CURRENT_BINARY_DIR})
   ENDIF()
   IF(NOT IOS)
     FIND_LIBRARY(DL_LIBRARY "dl")
@@ -441,13 +441,13 @@ ELSE()
       COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
       ENABLE_EXPORTS ON
       LINK_FLAGS "-flat_namespace -undefined suppress"
-      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     )
   ELSE()
     SET_TARGET_PROPERTIES(luajit PROPERTIES
       COMPILE_DEFINITIONS "${LUAJIT_DEFINITIONS}"
       ENABLE_EXPORTS ON
-      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     )
   ENDIF()
 ENDIF()
@@ -476,15 +476,15 @@ IF(USE_LUA2C)
         math(EXPR _stripped_file_length "${_luajit_file_length} - ${_luajit_source_dir_length} - 1")
         string(SUBSTRING ${file} ${_begin} ${_stripped_file_length} stripped_file)
 
-        set(generated_file "${CMAKE_BINARY_DIR}/luacode_tmp/${stripped_file}_${luajit_target}_generated.c")
+        set(generated_file "${CMAKE_CURRENT_BINARY_DIR}/luacode_tmp/${stripped_file}_${luajit_target}_generated.c")
 
         add_custom_command(
           OUTPUT ${generated_file}
           MAIN_DEPENDENCY ${source_file}
           DEPENDS luajit
-          COMMAND ${CMD} ${CMAKE_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}
-          COMMENT "${CMD} ${CMAKE_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}"
-          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+          COMMAND ${CMD} ${CMAKE_CURRENT_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}
+          COMMENT "${CMD} ${CMAKE_CURRENT_BINARY_DIR}/lua2c.lua ${source_file} ${generated_file}"
+          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         )
 
         get_filename_component(basedir ${generated_file} PATH)
@@ -520,7 +520,7 @@ ELSE()
       endif()
       set(CMD ${HOST_LUAJIT} ${HOST_LUAJIT_ARGS})
     else()
-      set(CMD ${CMAKE_BINARY_DIR}/luajit)
+      set(CMD ${CMAKE_CURRENT_BINARY_DIR}/luajit)
     endif()
     IF(ANDROID)
       if(USE_64BITS)
@@ -555,7 +555,7 @@ ELSE()
         math(EXPR _stripped_file_length "${_luajit_file_length} - ${_luajit_source_dir_length} - 1")
         string(SUBSTRING ${file} ${_begin} ${_stripped_file_length} stripped_file)
 
-        set(generated_file "${CMAKE_BINARY_DIR}/jitted_tmp/${stripped_file}_${luajit_target}_generated${CMAKE_C_OUTPUT_EXTENSION}")
+        set(generated_file "${CMAKE_CURRENT_BINARY_DIR}/jitted_tmp/${stripped_file}_${luajit_target}_generated${CMAKE_C_OUTPUT_EXTENSION}")
         string(REPLACE ";" " " LJDUMP_OPT_STR "${LJDUMP_OPT}")
 
         add_custom_command(
@@ -564,7 +564,7 @@ ELSE()
           DEPENDS luajit
           COMMAND ${CMD} ${LJDUMP_OPT} ${source_file} ${generated_file}
           COMMENT "${CMD} ${LJDUMP_OPT_STR} ${source_file} ${generated_file}"
-          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         )
         get_filename_component(basedir ${generated_file} PATH)
         file(MAKE_DIRECTORY ${basedir})
