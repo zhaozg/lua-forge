@@ -1,17 +1,13 @@
-ifneq ($(TARGET_SYS), )
-	OS:=$(TARGET_SYS)
-else
-	OS:=$(shell uname -s)
+CMAKE_FLAGS+= -H. -Bbuild
+
+ifdef CMAKE_BUILD_TYPE
+	CMAKE_BUILD_TYPE := Release
 endif
 
-ARCH:=$(shell uname -p)
-CMAKE_FLAGS+= -H. -B${OS}
-ifdef BUILDTYPE
-	BUILDTYPE := Release
-endif
 ifndef GENERATOR
 	GENERATOR :="Unix Makefiles"
 endif
+
 ifndef LUA_ENGINE
 	LUA_ENGINE := LuaJIT
 endif
@@ -22,12 +18,6 @@ ifeq ($(ARCH),aarch64)
 endif
 endif
 
-ifeq ($(OS),Android)
-	CMAKE_EXTRA_OPTIONS+=-DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=19 \
-	  -DCMAKE_ANDROID_ARCH_ABI=armeabi -DCMAKE_ANDROID_NDK=${ANDROID_NDK} \
-	  -DCMAKE_MAKE_PROGRAM=${MAKE} \
-	  -DHOST_COMPILER=gcc -DHOST_LINKER=ld -DHOST_BITS=-m32
-endif
 
 ifeq ($(OS),iOS)
 ifeq (${LUA_ENGINE}, Lua)
@@ -42,31 +32,26 @@ ifdef GENERATOR
 	CMAKE_FLAGS+= -G${GENERATOR}
 endif
 
-ifdef BUILDTYPE
-	CMAKE_FLAGS+= -DCMAKE_BUILD_TYPE=${BUILDTYPE}
+CMAKE_FLAGS+= -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+
+ifdef LUAJIT_BUILD_ALAMG
+	CMAKE_FLAGS+= -DLUAJIT_BUILD_ALAMG=ON
+else
+	CMAKE_FLAGS+= -DLUAJIT_BUILD_ALAMG=OFF
 endif
 
-ifdef WITHOUT_AMALG
-	CMAKE_FLAGS+= -DWITH_AMALG=OFF
+CMAKE_EXTRA_OPTIONS+= -DLUA_ENGINE=${LUA_ENGINE}
+
+ifdef CMAKE_TOOLCHAIN_FILE
+	CMAKE_EXTRA_OPTIONS += CMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
 endif
+IOS_ARCH=armv7
 
-#Disable NPROCS
-#~ ifdef NPROCS
-	#~ MAKE_EXTRA_OPTIONS+= -j${NPROCS}
-#~ endif
+.PHONY: build lua luajit Android Windows
 
-ifdef LUA_ENGINE
-	CMAKE_EXTRA_OPTIONS+= -DLUA_ENGINE=${LUA_ENGINE}
-endif
-
-ifdef LUA_BUILD_TYPE
-	CMAKE_EXTRA_OPTIONS+= -DLUA_BUILD_TYPE=${LUA_BUILD_TYPE}
-endif
-
-.PHONY: build lua luajit
 ##############################################################################
 all: build
-	${MAKE} -C ${OS} ${MAKE_EXTRA_OPTIONS}
+	${MAKE} -C build ${MAKE_EXTRA_OPTIONS}
 
 build:
 	echo build for $(OS) arch $(ARCH)
@@ -81,6 +66,33 @@ luajit:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=LuaJIT
 	${MAKE} -C ${OS} ${MAKE_EXTRA_OPTIONS}
 
+Android:
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUAJIT_BUILD_ALAMG=ON \
+	-DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+	-DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=19 \
+	-DCMAKE_ANDROID_NDK=${ANDROID_NDK}
+	cmake --build build --config Release
+
+iOSWithLua:
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=Lua \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/ios.toolchain.cmake \
+	-DIOS_PLATFORM=OS -DIOS_ARCH=$(IOS_ARCH) \
+	-DASM_FLAGS="-arch ${IOS_ARCH} -isysroot ${shell xcrun --sdk iphoneos --show-sdk-path}"
+	cmake --build build --config Release
+
+iOS:
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=LuaJIT \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/ios.toolchain.cmake \
+	-DIOS_PLATFORM=OS -DIOS_ARCH=$(IOS_ARCH) -DLUAJIT_DISABLE_JIT=1 \
+	-DASM_FLAGS="-arch ${IOS_ARCH} -isysroot ${shell xcrun --sdk iphoneos --show-sdk-path}"
+	cmake --build build --config Release
+
+Windows:
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUAJIT_BUILD_ALAMG=ON \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/Windows.toolchain.cmake
+	cmake --build build --config Release
+
+
 ##############################################################################
 clean:
-	rm -rf ${OS}
+	@cmake -E remove_directory build

@@ -12,28 +12,32 @@ SET(FFI_SRC
   ${FFI_DIR}/parser.c
 )
 
-if(WITH_SHARED_LUA)
-  if(IOS OR ANDROID)
+IF(WITH_SHARED_LUA)
+  IF(IOS OR ANDROID)
     SET(LIBTYPE STATIC)
     SET(WITH_SHARED_LUA OFF)
-  else()
+  ELSE()
     SET(LIBTYPE SHARED)
-  endif()
-else()
+  ENDIF()
+ELSE()
   SET(LIBTYPE STATIC)
-endif()
+ENDIF()
 
-add_library(ffi ${LIBTYPE} ${FFI_SRC})
-target_link_libraries (ffi lualib)
+ADD_LIBRARY(ffi ${LIBTYPE} ${FFI_SRC})
+TARGET_LINK_LIBRARIES (ffi lualib)
 
 #set(CMD lua)
 #add_custom_command(
 #  TARGET ffi
 #  PRE_BUILD
-#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x86.h -LN ${FFI_DIR}/call_x86.dasc
-#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x64.h -D X64 -LN ${FFI_DIR}/call_x86.dasc
-#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x64win.h -D X64 -D X64WIN ${FFI_DIR}/call_x86.dasc
-#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_arm.h -LNE ${FFI_DIR}/call_arm.dasc
+#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x86.h
+#           -LN ${FFI_DIR}/call_x86.dasc
+#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x64.h
+#           -D X64 -LN ${FFI_DIR}/call_x86.dasc
+#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_x64win.h
+#           -D X64 -D X64WIN ${FFI_DIR}/call_x86.dasc
+#  COMMAND ${CMD} ARGS ${FFI_DIR}/dynasm/dynasm.lua -o call_arm.h
+#           -LNE ${FFI_DIR}/call_arm.dasc
 #  COMMENT "Generating Header Files"
 #  WORKING_DIRECTORY ${CMAKE_CURRENT_DIR}
 #)
@@ -43,5 +47,5 @@ SET_TARGET_PROPERTIES(ffi PROPERTIES
   COMPILE_FLAGS "-I${FFI_DIR} -I{CMAKE_CURRENT_BINARY_DIR} -Wunused-function"
   OUTPUT_NAME "ffi"
 )
-list(APPEND LIB_LIST ffi)
+LIST(APPEND LIB_LIST ffi)
 

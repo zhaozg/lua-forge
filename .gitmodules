@@ -16,3 +16,6 @@
 [submodule "thirdparty/ffi"]
 	path = thirdparty/ffi
 	url = https://github.com/zhaozg/lua-ffi.git
+[submodule "cmake"]
+	path = cmake
+	url = https://github.com/zhaozg/luajit-cmake.git
