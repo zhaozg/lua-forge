@@ -18,16 +18,6 @@ ifeq ($(ARCH),aarch64)
 endif
 endif
 
-
-ifeq ($(OS),iOS)
-ifeq (${LUA_ENGINE}, Lua)
-	CMAKE_EXTRA_OPTIONS+=-DCMAKE_TOOLCHAIN_FILE=etc/ios.toolchain.cmake -DIOS_PLATFORM=OS
-else
-	CMAKE_EXTRA_OPTIONS+=-DCMAKE_TOOLCHAIN_FILE=etc/ios.toolchain.cmake -DIOS_PLATFORM=OS \
--DIOS_ARCH="armv7" -DLUAJIT_DISABLE_JIT=1 -DASM_FLAGS="-arch armv7 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk"
-endif
-endif
-
 ifdef GENERATOR
 	CMAKE_FLAGS+= -G${GENERATOR}
 endif
@@ -45,7 +35,7 @@ CMAKE_EXTRA_OPTIONS+= -DLUA_ENGINE=${LUA_ENGINE}
 ifdef CMAKE_TOOLCHAIN_FILE
 	CMAKE_EXTRA_OPTIONS += CMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
 endif
-IOS_ARCH=armv7
+IOS_ARCH?= armv7
 
 .PHONY: build lua luajit Android Windows
 
