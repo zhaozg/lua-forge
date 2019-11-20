@@ -35,7 +35,26 @@ CMAKE_EXTRA_OPTIONS+= -DLUA_ENGINE=${LUA_ENGINE}
 ifdef CMAKE_TOOLCHAIN_FILE
 	CMAKE_EXTRA_OPTIONS += CMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
 endif
-IOS_ARCH?= armv7
+
+PLATFORM	?= OS
+ifeq (${PLATFORM},OS)
+	ARCHS	?= armv7
+	USE_64BITS      =OFF
+	JIT := 1
+endif
+ifeq (${PLATFORM},OS64)
+	ARCHS	?= arm64
+	USE_64BITS      =ON
+	JIT := 1
+endif
+ifeq (${PLATFORM},SIMULATOR)
+	ARCHS	?= i386
+	USE_64BITS      =OFF
+endif
+ifeq (${PLATFORM},SIMULATOR64)
+	ARCHS	?= x86_64
+	USE_64BITS      =ON
+endif
 
 .PHONY: build lua luajit Android Windows
 
@@ -46,7 +65,7 @@ all: build
 build:
 	echo build for $(OS) arch $(ARCH)
 	echo cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
+	USE_64BITS=${USE_64BITS} cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS)
 
 lua:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=Lua
@@ -66,16 +85,14 @@ Android:
 iOSWithLua:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=Lua \
 	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/ios.toolchain.cmake \
-	-DIOS_PLATFORM=OS -DIOS_ARCH=$(IOS_ARCH) \
-	-DASM_FLAGS="-arch ${IOS_ARCH} -isysroot ${shell xcrun --sdk iphoneos --show-sdk-path}"
+	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS)
 	cmake --build build --config Release
 
 iOS:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=LuaJIT \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/ios.toolchain.cmake \
-	-DIOS_PLATFORM=OS -DIOS_ARCH=$(IOS_ARCH) -DLUAJIT_DISABLE_JIT=1 \
-	-DASM_FLAGS="-arch ${IOS_ARCH} -isysroot ${shell xcrun --sdk iphoneos --show-sdk-path}"
-	cmake --build build --config Release
+	USE_64BITS=${USE_64BITS} cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=LuaJIT \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/ios.toolchain.cmake  \
+	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS) -DLUAJIT_DISABLE_JIT=1
+	USE_64BITS=${USE_64BITS} cmake --build build --config Release
 
 Windows:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUAJIT_BUILD_ALAMG=ON \
