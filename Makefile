@@ -95,8 +95,23 @@ iOS:
 	USE_64BITS=${USE_64BITS} cmake --build build --config Release
 
 Windows:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUAJIT_BUILD_ALAMG=ON \
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) \
 	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/Windows.toolchain.cmake
+	cmake --build build --config Release
+
+x86_64-linux-gnu:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-linux-gnu $(CMAKE_EXTRA_OPTIONS) \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	cmake --build build --config Release
+
+aarch64-linux-gnu:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=aarch64-linux-gnu $(CMAKE_EXTRA_OPTIONS) \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	cmake --build build --config Release
+
+x86_64-windows-gnu:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-windows-gnu $(CMAKE_EXTRA_OPTIONS) \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
 
