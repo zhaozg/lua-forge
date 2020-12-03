@@ -109,11 +109,20 @@ aarch64-linux-gnu:
 	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
+mips64el-linux-gnuabi64:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=mips64el-linux-gnuabi64 $(CMAKE_EXTRA_OPTIONS) \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	cmake --build build --config Release
+
 x86_64-windows-gnu:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-windows-gnu $(CMAKE_EXTRA_OPTIONS) \
 	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
+native:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=native $(CMAKE_EXTRA_OPTIONS) \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	cmake --build build --config Release
 
 ##############################################################################
 clean:
