@@ -1,6 +1,6 @@
 CMAKE_FLAGS+= -H. -Bbuild
 
-ifdef CMAKE_BUILD_TYPE
+ifndef CMAKE_BUILD_TYPE
 	CMAKE_BUILD_TYPE := Release
 endif
 
@@ -116,6 +116,10 @@ mips64el-linux-gnuabi64:
 
 x86_64-windows-gnu:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-windows-gnu $(CMAKE_EXTRA_OPTIONS) \
+	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	cmake --build build --config Release
+x86_64-macos-gnu:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-macos-gnu $(CMAKE_EXTRA_OPTIONS) \
 	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
