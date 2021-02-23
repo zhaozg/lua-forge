@@ -84,48 +84,54 @@ Android:
 
 iOSWithLua:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=Lua \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/ios.toolchain.cmake \
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/ios.toolchain.cmake \
 	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS)
 	cmake --build build --config Release
 
 iOS:
 	USE_64BITS=${USE_64BITS} cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=LuaJIT \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/ios.toolchain.cmake  \
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/ios.toolchain.cmake  \
 	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS) -DLUAJIT_DISABLE_JIT=1
 	USE_64BITS=${USE_64BITS} cmake --build build --config Release
 
 Windows:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/Windows.toolchain.cmake
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/Windows.toolchain.cmake
 	cmake --build build --config Release
 
 x86_64-linux-gnu:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-linux-gnu $(CMAKE_EXTRA_OPTIONS) \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
 aarch64-linux-gnu:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=aarch64-linux-gnu $(CMAKE_EXTRA_OPTIONS) \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
 mips64el-linux-gnuabi64:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=mips64el-linux-gnuabi64 $(CMAKE_EXTRA_OPTIONS) \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
 x86_64-windows-gnu:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-windows-gnu $(CMAKE_EXTRA_OPTIONS) \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
+
+i386-windows-gnu:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=i386-windows-gnu $(CMAKE_EXTRA_OPTIONS) \
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
+	cmake --build build --config Release
+
 x86_64-macos-gnu:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-macos-gnu $(CMAKE_EXTRA_OPTIONS) \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
 native:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=native $(CMAKE_EXTRA_OPTIONS) \
-	-DCMAKE_TOOLCHAIN_FILE=cmake/Utils/zig.toolchain.cmake
+	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
 ##############################################################################
