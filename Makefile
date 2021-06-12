@@ -78,8 +78,15 @@ luajit:
 Android:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUAJIT_BUILD_ALAMG=ON \
 	-DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-	-DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=19 \
-	-DCMAKE_ANDROID_NDK=${ANDROID_NDK}
+	-DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=21 \
+	-DCMAKE_ANDROID_NDK=${ANDROID_NDK} -DANDROID_ABI=armeabi-v7a
+	cmake --build build --config Release
+
+Android64:
+	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUAJIT_BUILD_ALAMG=ON \
+	-DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+	-DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=21 \
+	-DCMAKE_ANDROID_NDK=${ANDROID_NDK} -DANDROID_ABI=arm64-v8a
 	cmake --build build --config Release
 
 iOSWithLua:
