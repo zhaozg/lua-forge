@@ -1,3 +1,5 @@
+[![CI](https://github.com/zhaozg/lua-forge/actions/workflows/ci.yaml/badge.svg)](https://github.com/zhaozg/lua-forge/actions/workflows/ci.yaml)
+
 ## Build
 
 ### iOS 
@@ -8,4 +10,4 @@
 
 2. For arm64
 
-`USE_64BITS=ON make iOS IOS_ARCH=arm64`
+`make iOS  PLATFORM=OS64`
