@@ -66,3 +66,23 @@ jobs:
     - name: Build
       run: make Android64
 
+  Windows:
+    runs-on: windows-latest
+
+    steps:
+    - uses: lukka/get-cmake@latest
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Config
+      run: cmake -H. -Bbuild -DLUAJIT_BUILD_ALAMG=ON
+      shell: cmd
+    - name: Build
+      run: cmake --build build --config Release
+      shell: cmd
+    - name: Test
+      working-directory: ${{github.workspace}}/build/${{env.BUILD_TYPE}}
+      run: luajit.exe -e "print(_VERSION)"
+      shell: cmd
+
