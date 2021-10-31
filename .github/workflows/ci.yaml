@@ -51,3 +51,18 @@ jobs:
 
     - name: Build
       run: make iOSWithLua
+
+  Android64:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk-bundle
+
+    steps:
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Build
+      run: make Android64
+

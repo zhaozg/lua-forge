@@ -56,7 +56,7 @@ ifeq (${PLATFORM},SIMULATOR64)
 	USE_64BITS      =ON
 endif
 
-.PHONY: build lua luajit Android Windows
+.PHONY: build lua luajit Windows
 
 ##############################################################################
 all: build
