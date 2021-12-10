@@ -6,16 +6,16 @@
 	url = http://192.168.0.10:8080/lua/lua.git
 [submodule "luac"]
 	path = luac
-	url = https://github.com/lua/luac.git
+	url = http://192.168.0.10:8080/lua/luac.git
 [submodule "tests"]
 	path = tests
-	url = https://github.com/lua/tests.git
+	url = http://192.168.0.10:8080/lua/tests.git
 [submodule "LuaJIT-test-cleanup"]
 	path = LuaJIT-test-cleanup
-	url = https://github.com/LuaJIT/LuaJIT-test-cleanup.git
+	url = http://192.168.0.10:8080/lua/LuaJIT-test-cleanup.git
 [submodule "thirdparty/ffi"]
 	path = thirdparty/ffi
-	url = https://github.com/zhaozg/lua-ffi.git
+	url = http://192.168.0.10:8080/lua/lua-ffi.git
 [submodule "cmake"]
 	path = cmake
 	url = http://192.168.0.10:8080/lua/luajit-cmake.git
