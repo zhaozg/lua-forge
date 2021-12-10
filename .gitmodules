@@ -7,9 +7,6 @@
 [submodule "luac"]
 	path = luac
 	url = http://192.168.0.10:8080/lua/luac.git
-[submodule "tests"]
-	path = tests
-	url = http://192.168.0.10:8080/lua/tests.git
 [submodule "LuaJIT-test-cleanup"]
 	path = LuaJIT-test-cleanup
 	url = http://192.168.0.10:8080/lua/LuaJIT-test-cleanup.git
