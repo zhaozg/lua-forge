@@ -126,8 +126,8 @@ x86_64-windows-gnu:
 	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
-i386-windows-gnu:
-	cmake $(CMAKE_FLAGS) -DTARGET_SYS=i386-windows-gnu $(CMAKE_EXTRA_OPTIONS) \
+x86-windows-gnu:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86-windows-gnu $(CMAKE_EXTRA_OPTIONS) \
 	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
