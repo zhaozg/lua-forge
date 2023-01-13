@@ -4,3 +4,5 @@
 /Darwin
 /Linux
 /iOS
+/zig-cache
+/zig-out
