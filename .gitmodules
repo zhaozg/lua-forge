@@ -13,9 +13,12 @@
 [submodule "LuaJIT-test-cleanup"]
 	path = LuaJIT-test-cleanup
 	url = https://github.com/LuaJIT/LuaJIT-test-cleanup.git
-[submodule "thirdparty/ffi"]
-	path = thirdparty/ffi
-	url = https://github.com/zhaozg/lua-ffi.git
 [submodule "cmake"]
 	path = cmake
 	url = https://github.com/zhaozg/luajit-cmake.git
+[submodule "thirdparty/compat-5.3"]
+	path = thirdparty/compat-5.3
+	url = https://github.com/lunarmodules/lua-compat-5.3.git
+[submodule "thirdparty/ffi"]
+	path = thirdparty/ffi
+	url = https://github.com/zhaozg/luaffi.git
