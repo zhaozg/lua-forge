@@ -29,6 +29,8 @@ ifdef LUAJIT_BUILD_ALAMG
 else
 	CMAKE_FLAGS+= -DLUAJIT_BUILD_ALAMG=OFF
 endif
+else
+	CMAKE_FLAGS+= -DWITH_LIBFFI=ON
 endif
 endif
 
@@ -37,6 +39,7 @@ ifdef CMAKE_TOOLCHAIN_FILE
 endif
 
 PLATFORM	?= OS
+USE_64BITS      ?= ON
 ifeq (${PLATFORM},OS)
 	ARCHS	?= armv7
 	USE_64BITS      =OFF
