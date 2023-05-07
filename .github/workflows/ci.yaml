@@ -55,11 +55,13 @@ jobs:
   Android64:
     runs-on: ubuntu-latest
     env:
-      ANDROID_NDK: /usr/local/lib/android/sdk/ndk-bundle
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/23.1.7779620
 
     steps:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v2
+    - name: Install NDK
+      run: sdkmanager "ndk;23.1.7779620"
     - uses: actions/checkout@v2
       with:
         submodules: recursive
