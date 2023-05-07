@@ -32,7 +32,7 @@ jobs:
   Android:
     runs-on: ubuntu-latest
     env:
-      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/23.1.7779620
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/25.1.8937393
     strategy:
       matrix:
         lua: [Lua, LuaJIT]
@@ -42,38 +42,21 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v2
     - name: Install NDK
-      run: sdkmanager "ndk;23.1.7779620"
+      run: sdkmanager "ndk;25.1.8937393"
+    - name: install libc6-dev-i386
+      if: ${{ matrix.target == 'Android' && matrix.lua == 'LuaJIT' }}
+      run: sudo apt-get install libc6-dev-i386
     - uses: actions/checkout@v2
       with:
         submodules: recursive
     - name: Build
       run: make ${{matrix.target}} LUA_ENGINE=${{matrix.lua}}
 
-  iOS64_LuaJIT:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: depends
-      run: brew install mingw-w64
-    - name: Build
-      run: make iOS PLATFORM=OS64
-
-  iOS_Lua:
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-
-    - name: Build
-      run: make iOSWithLua
-
   Windows:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        lua: [Lua, LuaJIT]
 
     steps:
     - uses: lukka/get-cmake@latest
@@ -82,13 +65,28 @@ jobs:
         submodules: recursive
 
     - name: Config
-      run: cmake -H. -Bbuild -DLUAJIT_BUILD_ALAMG=ON
+      run: cmake -H. -Bbuild -DLUA_ENGINE=${{matrix.lua}}
       shell: cmd
     - name: Build
       run: cmake --build build --config Release
       shell: cmd
     - name: Test
       working-directory: ${{github.workspace}}/build/${{env.BUILD_TYPE}}
-      run: luajit.exe -e "print(_VERSION)"
+      run: ${{ matrix.lua }}.exe -e "print(_VERSION)"
       shell: cmd
+
+  iOS:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        lua: [Lua, LuaJIT]
+        platform: [OS64]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Build
+      run: make iOS LUA_ENGINE=${{ matrix.lua }} PLATFORM=${{ matrix.platform }}
 
