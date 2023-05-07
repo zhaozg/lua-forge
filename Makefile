@@ -30,7 +30,9 @@ else
 	CMAKE_FLAGS+= -DLUAJIT_BUILD_ALAMG=OFF
 endif
 else
+ifdef WITH_LIBFFI
 	CMAKE_FLAGS+= -DWITH_LIBFFI=ON
+endif
 endif
 endif
 
@@ -92,14 +94,8 @@ Android64:
 	-DCMAKE_ANDROID_NDK=${ANDROID_NDK} -DANDROID_ABI=arm64-v8a
 	cmake --build build --config Release
 
-iOSWithLua:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=Lua \
-	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/ios.toolchain.cmake \
-	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS)
-	cmake --build build --config Release
-
 iOS:
-	USE_64BITS=${USE_64BITS} cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUA_ENGINE=LuaJIT \
+	USE_64BITS=${USE_64BITS} cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) \
 	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/ios.toolchain.cmake  \
 	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS) -DLUAJIT_DISABLE_JIT=1
 	USE_64BITS=${USE_64BITS} cmake --build build --config Release
