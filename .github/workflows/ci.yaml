@@ -29,6 +29,26 @@ jobs:
       working-directory: ${{github.workspace}}/build
       run: ./${{matrix.lua}} -e "print(_VERSION)"
 
+  Android:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/23.1.7779620
+    strategy:
+      matrix:
+        lua: [Lua, LuaJIT]
+        target: [Android64, Android]
+
+    steps:
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+    - name: Install NDK
+      run: sdkmanager "ndk;23.1.7779620"
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Build
+      run: make ${{matrix.target}} LUA_ENGINE=${{matrix.lua}}
+
   iOS64_LuaJIT:
     runs-on: macos-latest
 
@@ -51,22 +71,6 @@ jobs:
 
     - name: Build
       run: make iOSWithLua
-
-  Android64:
-    runs-on: ubuntu-latest
-    env:
-      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/23.1.7779620
-
-    steps:
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v2
-    - name: Install NDK
-      run: sdkmanager "ndk;23.1.7779620"
-    - uses: actions/checkout@v2
-      with:
-        submodules: recursive
-    - name: Build
-      run: make Android64
 
   Windows:
     runs-on: windows-latest
