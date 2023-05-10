@@ -20,8 +20,20 @@ if("${isSystemDir}" STREQUAL "-1")
 endif()
 
 # convert /MD to /MD when build with MSVC
-include(${CMAKE_CURRENT_LIST_DIR}/etc/static.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/etc/portable.cmake)
+if(MSVC)
+  # Statically build against C runtime (use the right version for Release/Debug)
+  set(CompilerFlags
+      CMAKE_CXX_FLAGS
+      CMAKE_CXX_FLAGS_DEBUG
+      CMAKE_CXX_FLAGS_RELEASE
+      CMAKE_C_FLAGS
+      CMAKE_C_FLAGS_DEBUG
+      CMAKE_C_FLAGS_RELEASE
+  )
+  foreach(CompilerFlag ${CompilerFlags})
+    string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+  endforeach()
+endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Android")
   message("-- Build for Android")
