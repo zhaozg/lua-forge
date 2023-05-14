@@ -50,9 +50,11 @@ set(BUILD_MODULE OFF CACHE STRING "Build lua[jit] as static library")
 option(BUILD_MODULE "Build as module" ON)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 
-if(NOT LUA_ENGINE)
+if(NOT LUA_ENGINE AND NOT DEFINED ENV{LUA_ENGINE})
   set(LUA_ENGINE "LuaJIT" CACHE STRING "Link to LuaJIT or PUC Lua" FORCE)
   set_property(CACHE LUA_ENGINE PROPERTY STRINGS "Lua;LuaJIT")
+elseif(NOT LUA_ENGINE)
+  set(LUA_ENGINE $ENV{LUA_ENGINE})
 endif()
 
 if(NOT LUA_BUILD_TYPE)
