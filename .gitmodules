@@ -4,15 +4,6 @@
 [submodule "lua"]
 	path = lua
 	url = https://github.com/lua/lua.git
-[submodule "luac"]
-	path = luac
-	url = https://github.com/lua/luac.git
-[submodule "tests"]
-	path = tests
-	url = https://github.com/lua/tests.git
-[submodule "LuaJIT-test-cleanup"]
-	path = LuaJIT-test-cleanup
-	url = https://github.com/LuaJIT/LuaJIT-test-cleanup.git
 [submodule "cmake"]
 	path = cmake
 	url = https://github.com/zhaozg/luajit-cmake.git
