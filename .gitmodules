@@ -4,18 +4,12 @@
 [submodule "lua"]
 	path = lua
 	url = http://192.168.0.10:8080/lua/lua.git
-[submodule "luac"]
-	path = luac
-	url = http://192.168.0.10:8080/lua/luac.git
-[submodule "LuaJIT-test-cleanup"]
-	path = LuaJIT-test-cleanup
-	url = http://192.168.0.10:8080/lua/LuaJIT-test-cleanup.git
-[submodule "thirdparty/ffi"]
-	path = thirdparty/ffi
-	url = http://192.168.0.10:8080/lua/lua-ffi.git
 [submodule "cmake"]
 	path = cmake
 	url = http://192.168.0.10:8080/lua/luajit-cmake.git
+[submodule "thirdparty/ffi"]
+	path = thirdparty/ffi
+	url = http://192.168.0.10:8080/lua/lua-ffi.git
 [submodule "thirdparty/compat-5.3"]
 	path = thirdparty/compat-5.3
 	url = http://192.168.0.10:8080/lua/lua-compat-5.3.git
