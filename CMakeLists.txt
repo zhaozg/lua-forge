@@ -35,6 +35,13 @@ if(MSVC)
   endforeach()
 endif()
 
+if(CMAKE_COMPILER_IS_GNUCC)
+  set(LUA_TARGET_SHARED ON)
+endif()
+if(DEFINED ENV{LUA_TARGET_SHARED})
+  set(LUA_TARGET_SHARED $ENV{LUA_TARGET_SHARED})
+endif()
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Android")
   message("-- Build for Android")
   set(TARGET_LJARCH "arm") # for luajit
