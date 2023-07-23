@@ -101,9 +101,9 @@ iOS:
 	USE_64BITS=${USE_64BITS} cmake --build build --config Release
 
 Windows:
-	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) \
+	USE_64BITS=${USE_64BITS} cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) \
 	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/Windows.toolchain.cmake
-	cmake --build build --config Release
+	USE_64BITS=${USE_64BITS} cmake --build build --config Release
 
 x86_64-linux-gnu:
 	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-linux-gnu $(CMAKE_EXTRA_OPTIONS) \
