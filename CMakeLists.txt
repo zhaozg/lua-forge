@@ -100,8 +100,21 @@ if(USE_LUAJIT)
   include_directories(${LUAJIT_DIR}/src)
   if(hasParent)
     set(LUA_TARGET $<TARGET_FILE:luajit> PARENT_SCOPE)
+<<<<<<< HEAD
     set(LUA_LIBRARIES libluajit PARENT_SCOPE)
     set(LUA_INCLUDE_DIR ${LUAJIT_DIR}/src PARENT_SCOPE)
+||||||| 57485a5
+    set(LUA_LIBRARIES libluajit PARENT_SCOPE)
+    set(LUA_INCLUDE_DIR ${LUAJIT_DIR}/src PARENT_SCOPE)
+    get_target_property(TARGET_PATH luajit RUNTIME_OUTPUT_DIRECTORY)
+    get_target_property(TARGET_NAME luajit RUNTIME_OUTPUT_NAME)
+=======
+    set(LUA_LIBRARIES luajit::lib PARENT_SCOPE)
+    get_target_property(LUA_INCLUDE_DIR luajit::header INCLUDE_DIRECTORIES)
+    set(LUA_INCLUDE_DIR ${LUA_INCLUDE_DIR} PARENT_SCOPE)
+    get_target_property(TARGET_PATH luajit RUNTIME_OUTPUT_DIRECTORY)
+    get_target_property(TARGET_NAME luajit RUNTIME_OUTPUT_NAME)
+>>>>>>> master
   endif()
   get_target_property(TARGET_NAME luajit RUNTIME_OUTPUT_NAME)
 else()
@@ -110,8 +123,21 @@ else()
   include_directories(${LUA_DIR})
   if(hasParent)
     set(LUA_TARGET $<TARGET_FILE:lua> PARENT_SCOPE)
+<<<<<<< HEAD
     set(LUA_LIBRARIES liblua PARENT_SCOPE)
     set(LUA_INCLUDE_DIR ${LUA_DIR} PARENT_SCOPE)
+||||||| 57485a5
+    set(LUA_LIBRARIES liblua PARENT_SCOPE)
+    set(LUA_INCLUDE_DIR ${LUA_DIR} PARENT_SCOPE)
+    get_target_property(TARGET_PATH lua RUNTIME_OUTPUT_DIRECTORY)
+    get_target_property(TARGET_NAME lua RUNTIME_OUTPUT_NAME)
+=======
+    set(LUA_LIBRARIES lua::lib PARENT_SCOPE)
+    get_target_property(LUA_INCLUDE_DIR lua::header INCLUDE_DIRECTORIES)
+    set(LUA_INCLUDE_DIR ${LUA_INCLUDE_DIR} PARENT_SCOPE)
+    get_target_property(TARGET_PATH lua RUNTIME_OUTPUT_DIRECTORY)
+    get_target_property(TARGET_NAME lua RUNTIME_OUTPUT_NAME)
+>>>>>>> master
   endif()
   get_target_property(TARGET_NAME lua RUNTIME_OUTPUT_NAME)
   if (WITH_LIBFFI)
