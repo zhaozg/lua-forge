@@ -45,7 +45,7 @@ jobs:
       run: sdkmanager "ndk;25.1.8937393"
     - name: install libc6-dev-i386
       if: ${{ matrix.target == 'Android' && matrix.lua == 'LuaJIT' }}
-      run: sudo apt-get install libc6-dev-i386
+      run: sudo apt update && sudo apt-get install libc6-dev-i386 --fix-missing
     - uses: actions/checkout@v2
       with:
         submodules: recursive
