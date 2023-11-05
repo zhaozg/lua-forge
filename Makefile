@@ -130,8 +130,8 @@ i386-windows-gnu:
 	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
-x86_64-macos-gnu:
-	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-macos-gnu $(CMAKE_EXTRA_OPTIONS) \
+x86_64-macos-none:
+	cmake $(CMAKE_FLAGS) -DTARGET_SYS=x86_64-macos-none $(CMAKE_EXTRA_OPTIONS) \
 	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/zig.toolchain.cmake
 	cmake --build build --config Release
 
