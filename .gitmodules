@@ -13,3 +13,6 @@
 [submodule "thirdparty/ffi"]
 	path = thirdparty/ffi
 	url = https://github.com/zhaozg/luaffi.git
+[submodule "modules/lfs"]
+	path = modules/lfs
+	url = https://github.com/lunarmodules/luafilesystem.git
