@@ -133,25 +133,3 @@ if(hasParent)
   set(LUA_TARGET_NAME ${LUA_TARGET_NAME} PARENT_SCOPE)
 endif()
 
-if(LUAJIT_ENABLE_LUA52COMPAT)
-  add_definitions(-DCOMPAT52_IS_LUAJIT)
-endif()
-
-if(WIN32)
-  add_definitions(-DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS)
-else()
-  find_package(Threads)
-  add_definitions(-DPTHREADS)
-endif()
-
-add_library(lfs SHARED modules/lfs/src/lfs.c)
-set_target_properties(lfs PROPERTIES
-  SUFFIX ".so"
-  PREFIX ""
-  COMPILE_FLAGS "-DLUA_LIB")
-if(USE_LUAJIT)
-  target_link_libraries(lfs luajit::lib luajit::header)
-else()
-  target_link_libraries(lfs lua::lib lua::header)
-endif()
-
