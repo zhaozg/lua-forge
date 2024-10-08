@@ -15,4 +15,4 @@
 	url = http://192.168.0.10:8080/lua/lua-compat-5.3.git
 [submodule "modules/lfs"]
 	path = modules/lfs
-	url = https://github.com/lunarmodules/luafilesystem.git
+	url = http://192.168.0.10:8080/lua/luafilesystem.git
