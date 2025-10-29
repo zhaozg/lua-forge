@@ -83,21 +83,22 @@ luajit:
 Android:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUAJIT_BUILD_ALAMG=ON \
 	-DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-	-DCMAKE_SYSTEM_NAME=Android -DANDROID_NATIVE_API_LEVEL=21 \
+	-DCMAKE_SYSTEM_NAME=Android -DANDROID_NATIVE_API_LEVEL=24 \
 	-DCMAKE_ANDROID_NDK=${ANDROID_NDK} -DANDROID_ABI=armeabi-v7a
 	cmake --build build --config Release
 
 Android64:
 	cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) -DLUAJIT_BUILD_ALAMG=ON \
 	-DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-	-DCMAKE_SYSTEM_NAME=Android -DANDROID_NATIVE_API_LEVEL=21 \
-	-DCMAKE_ANDROID_NDK=${ANDROID_NDK} -DANDROID_ABI=arm64-v8a
+	-DANDROID_PLATFORM=android-24 -DANDROID_ABI=arm64-v8a \
+	-DCMAKE_ANDROID_NDK=${ANDROID_NDK}
 	cmake --build build --config Release
 
 iOS:
 	USE_64BITS=${USE_64BITS} cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) \
 	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/ios.toolchain.cmake  \
-	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS) -DLUAJIT_DISABLE_JIT=1
+	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS) -DLUAJIT_DISABLE_JIT=1 \
+	-DASM_FLAGS="-arch ${IOS_ARCH} -isysroot ${shell xcrun --sdk iphoneos --show-sdk-path}"
 	USE_64BITS=${USE_64BITS} cmake --build build --config Release
 
 Windows:

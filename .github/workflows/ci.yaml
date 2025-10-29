@@ -32,7 +32,8 @@ jobs:
   Android:
     runs-on: ubuntu-latest
     env:
-      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/25.1.8937393
+      ANDROID_NDK_VER: 28.2.13676358
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/28.2.13676358
     strategy:
       matrix:
         lua: [Lua, LuaJIT]
@@ -42,7 +43,7 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v2
     - name: Install NDK
-      run: sdkmanager "ndk;25.1.8937393"
+      run: sdkmanager "ndk;$ANDROID_NDK_VER"
     - name: install libc6-dev-i386
       if: ${{ matrix.target == 'Android' && matrix.lua == 'LuaJIT' }}
       run: sudo apt update && sudo apt-get install libc6-dev-i386 --fix-missing

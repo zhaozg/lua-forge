@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-set(projects C ASM)
-project(lua ${projects})
+project(lua C ASM)
 
 # use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH FALSE CACHE INTERNAL "")
@@ -74,9 +73,6 @@ endif()
 
 if(LUA_ENGINE STREQUAL Lua)
   add_definitions(-DWITH_PLAIN_LUA)
-  if(NOT WIN32)
-    add_definitions(-DLUA_USE_DLOPEN)
-  endif()
   set(USE_LUAJIT OFF)
 else()
   set(USE_LUAJIT ON)
@@ -131,7 +127,7 @@ if(LUAJIT_ENABLE_LUA52COMPAT)
 endif()
 
 if(WIN32)
-  add_definitions(-DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 else()
   find_package(Threads)
   add_definitions(-DPTHREADS)
