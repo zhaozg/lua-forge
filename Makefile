@@ -61,6 +61,14 @@ ifeq (${PLATFORM},SIMULATOR64)
 	USE_64BITS      =ON
 endif
 
+ifneq (${PLATFORM},)
+ifeq ($(findstring 64,$(PLATFORM)),64)
+	USE_64BITS      =ON
+else
+	USE_64BITS      =OFF
+endif
+endif
+
 .PHONY: build lua luajit Windows
 
 ##############################################################################
@@ -99,6 +107,12 @@ iOS:
 	-DCMAKE_TOOLCHAIN_FILE=$(shell pwd)/cmake/Utils/ios.toolchain.cmake  \
 	-DPLATFORM=${PLATFORM} -DARCHS=$(ARCHS) -DLUAJIT_DISABLE_JIT=1 \
 	-DASM_FLAGS="-arch ${IOS_ARCH} -isysroot ${shell xcrun --sdk iphoneos --show-sdk-path}"
+	USE_64BITS=${USE_64BITS} cmake --build build --config Release
+
+OHOS:
+	USE_64BITS=${USE_64BITS} cmake $(CMAKE_FLAGS) $(CMAKE_EXTRA_OPTIONS) \
+	-DCMAKE_TOOLCHAIN_FILE=${HARMONY_NDK}/build/cmake/ohos.toolchain.cmake \
+	-DOHOS_ARCH=$(PLATFORM)
 	USE_64BITS=${USE_64BITS} cmake --build build --config Release
 
 Windows:
