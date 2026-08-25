@@ -133,6 +133,7 @@ else()
   add_definitions(-DPTHREADS)
 endif()
 
+if (NOT CMAKE_SYSTEM_NAME STREQUAL iOS)
 add_library(lfs SHARED modules/lfs/src/lfs.c)
 set_target_properties(lfs PROPERTIES
   SUFFIX ".so"
@@ -142,5 +143,6 @@ if(USE_LUAJIT)
   target_link_libraries(lfs luajit::lib luajit::header)
 else()
   target_link_libraries(lfs lua::lib lua::header)
+endif()
 endif()
 
