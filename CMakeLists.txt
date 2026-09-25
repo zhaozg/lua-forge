@@ -134,11 +134,16 @@ else()
 endif()
 
 if (NOT CMAKE_SYSTEM_NAME STREQUAL iOS)
-add_library(lfs SHARED modules/lfs/src/lfs.c)
-set_target_properties(lfs PROPERTIES
+if (BUILD_SHARED_LIBS)
+  add_library(lfs SHARED modules/lfs/src/lfs.c)
+  set_target_properties(lfs PROPERTIES
   SUFFIX ".so"
-  PREFIX ""
-  COMPILE_FLAGS "-DLUA_LIB")
+  PREFIX "")
+else()
+  add_library(lfs STATIC modules/lfs/src/lfs.c)
+endif()
+set_target_properties(lfs PROPERTIES COMPILE_FLAGS "-DLUA_LIB")
+
 if(USE_LUAJIT)
   target_link_libraries(lfs luajit::lib luajit::header)
 else()
